@@ -1,0 +1,63 @@
+<section class="board" dir="rtl">
+  <header>
+    <div>
+      <h1>لوحة حالات الطلبات</h1>
+      <p>اسحب البطاقات عبر: مستلم ← قيد التجهيز ← تم الشحن ← تم التسليم.</p>
+    </div>
+    <button type="button" class="btn" (click)="load()">تحديث</button>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  @if (loading() && orders().length === 0) {
+    <p class="muted">جارٍ تحميل الطلبات…</p>
+  } @else {
+    <div class="columns">
+      @for (col of columns; track col.status) {
+        <div
+          class="column"
+          (dragover)="onDragOver($event)"
+          (drop)="onDrop(col.status, $event)"
+        >
+          <div class="column__head">
+            <h2>{{ col.title }}</h2>
+            <span>{{ byStatus(col.status).length }}</span>
+          </div>
+          <div class="column__body">
+            @for (order of byStatus(col.status); track order.id) {
+              <article
+                class="card"
+                draggable="true"
+                [class.dragging]="draggingId() === order.id"
+                (dragstart)="onDragStart(order.id, $event)"
+                (dragend)="onDragEnd()"
+              >
+                <div class="card__top">
+                  <strong>{{ order.orderNumber }}</strong>
+                  <span>{{ order.total | currency: 'EGP':'symbol-narrow':'1.0-2' }}</span>
+                </div>
+                <p>{{ order.shopName }}</p>
+                <small>
+                  {{ paymentLabel(order.paymentMethod) }}
+                  · {{ order.createdAt | date: 'short' }}
+                </small>
+                <ul>
+                  @for (item of order.items.slice(0, 2); track $index) {
+                    <li>{{ item.title }} × {{ item.quantity }}</li>
+                  }
+                  @if (order.items.length > 2) {
+                    <li>+{{ order.items.length - 2 }} المزيد</li>
+                  }
+                </ul>
+              </article>
+            } @empty {
+              <p class="empty">أسقط الطلبات هنا</p>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</section>

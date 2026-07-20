@@ -1,0 +1,87 @@
+<section class="ledger" dir="rtl">
+  <header>
+    <div>
+      <h1>دفتر ائتمان العملاء</h1>
+      <p>تحديد حدود الائتمان وتسجيل الدفعات النقدية مقابل دين المتجر.</p>
+    </div>
+    <button type="button" class="btn" (click)="load()">تحديث</button>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  <div class="layout">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>المتجر</th>
+            <th>الحد</th>
+            <th>الدين</th>
+            <th>المتاح</th>
+            <th>المستخدم</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="5" class="muted">جارٍ التحميل…</td></tr>
+          } @else {
+            @for (w of wallets(); track w.id) {
+              <tr (click)="open(w)" [class.active]="selected()?.id === w.id">
+                <td>
+                  <strong>{{ shopName(w) }}</strong>
+                  <small>{{ shopMeta(w) }}</small>
+                </td>
+                <td>{{ w.creditLimit | currency: 'EGP':'symbol-narrow':'1.0-2' }}</td>
+                <td>{{ w.currentDebt | currency: 'EGP':'symbol-narrow':'1.0-2' }}</td>
+                <td>{{ w.availableCredit | currency: 'EGP':'symbol-narrow':'1.0-2' }}</td>
+                <td>{{ w.utilization / 100 | percent: '1.0-0' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="muted">لا توجد محافظ بعد. اعتمد متجراً لإنشاء واحدة.</td></tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (selected(); as w) {
+      <aside class="panel">
+        <h2>{{ shopName(w) }}</h2>
+        <p class="sub">الدين {{ w.currentDebt | currency: 'EGP':'symbol-narrow':'1.2-2' }}</p>
+
+        <label>
+          حد الائتمان
+          <div class="row">
+            <input type="number" min="0" [(ngModel)]="limitDraft" />
+            <button type="button" class="btn primary" (click)="saveLimit()">حفظ الحد</button>
+          </div>
+        </label>
+
+        <label>
+          تسجيل دفعة نقدية
+          <input type="number" min="0.01" step="0.01" [(ngModel)]="paymentDraft" placeholder="المبلغ" />
+          <input type="text" [(ngModel)]="paymentNote" placeholder="ملاحظة (اختياري)" />
+          <button type="button" class="btn primary" (click)="savePayment()">تسجيل الدفعة</button>
+        </label>
+
+        <h3>المعاملات</h3>
+        <ul>
+          @for (tx of w.transactions; track tx.id || $index) {
+            <li>
+              <div>
+                <strong>{{ txTypeLabel(tx.type) }}</strong>
+                <small>{{ tx.note }}</small>
+                @if (tx.createdAt) {
+                  <time>{{ tx.createdAt | date: 'short' }}</time>
+                }
+              </div>
+              <span [class.neg]="tx.amount < 0">{{ tx.amount | currency: 'EGP':'symbol-narrow':'1.2-2' }}</span>
+            </li>
+          }
+        </ul>
+      </aside>
+    }
+  </div>
+</section>

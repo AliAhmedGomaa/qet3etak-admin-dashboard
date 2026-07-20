@@ -1,0 +1,155 @@
+.board {
+  display: grid;
+  gap: 1rem;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+
+header p {
+  margin: 0.3rem 0 0;
+  color: #64748b;
+}
+
+.btn {
+  min-height: 2.6rem;
+  border: 0;
+  border-radius: 0.65rem;
+  padding: 0 0.9rem;
+  background: #f1f5f9;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(14rem, 1fr));
+  gap: 0.85rem;
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.column {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  min-height: 28rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.column__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.column__head h2 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.column__head span {
+  background: #0f172a;
+  color: #fff;
+  border-radius: 999px;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0 0.4rem;
+}
+
+.column__body {
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.65rem;
+  flex: 1;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  padding: 0.8rem;
+  cursor: grab;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+.card.dragging {
+  opacity: 0.55;
+  transform: rotate(1.5deg) scale(0.98);
+}
+
+.card__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.card__top span {
+  color: #10b880;
+  font-weight: 800;
+}
+
+.card p {
+  margin: 0.35rem 0 0.2rem;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.card small {
+  color: #94a3b8;
+  font-size: 0.7rem;
+}
+
+.card ul {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.card li {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.empty {
+  margin: 1.5rem 0;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.err {
+  background: #fef2f2;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+}
+
+.muted {
+  color: #94a3b8;
+}

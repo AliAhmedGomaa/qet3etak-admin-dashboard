@@ -1,0 +1,156 @@
+<section class="inventory" dir="rtl">
+  <header class="inventory__header">
+    <div>
+      <h1>إدارة المخزون</h1>
+      <p>تعديل المخزون والسعر مباشرة · شرائح أسعار الجملة بلا حدود.</p>
+    </div>
+    <div class="inventory__actions">
+      <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
+      <button type="button" class="btn btn-primary" (click)="openCreate()">إضافة منتج</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>المنتج</th>
+          <th>الجودة</th>
+          <th>المخزون</th>
+          <th>السعر الأساسي</th>
+          <th>شرائح الجملة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="6" class="muted">جارٍ التحميل…</td></tr>
+        } @else if (products().length === 0) {
+          <tr><td colspan="6" class="muted">لا توجد منتجات بعد.</td></tr>
+        } @else {
+          @for (product of products(); track product.id) {
+            <tr>
+              <td>
+                <div class="prod">
+                  <img [src]="product.imageUrl || '/favicon.ico'" [alt]="product.title" width="44" height="44" />
+                  <div>
+                    <strong>{{ product.title }}</strong>
+                    <small>{{ product.brand }} · {{ product.model }} · {{ product.category }}</small>
+                  </div>
+                </div>
+              </td>
+              <td><span class="chip">{{ gradeLabel(product.qualityGrade) }}</span></td>
+              <td>
+                <input
+                  class="inline"
+                  type="number"
+                  min="0"
+                  [value]="product.stockQuantity"
+                  (blur)="onStockBlur(product, $event)"
+                  [disabled]="savingId() === product.id"
+                />
+              </td>
+              <td>
+                <input
+                  class="inline"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [value]="product.basePrice"
+                  (blur)="onPriceBlur(product, $event)"
+                  [disabled]="savingId() === product.id"
+                />
+              </td>
+              <td class="tiers-cell">
+                @for (tier of product.tieredPricing; track tier.minQty) {
+                  <span class="tier">{{ tier.minQty }}+ ← {{ tier.price | currency: 'EGP':'symbol-narrow':'1.2-2' }}</span>
+                } @empty {
+                  <span class="muted">السعر الأساسي فقط</span>
+                }
+              </td>
+              <td class="row-actions">
+                <button type="button" class="btn btn-ghost" (click)="openEdit(product)">تعديل</button>
+                <button type="button" class="btn btn-danger" (click)="remove(product)">حذف</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+@if (editorOpen()) {
+  <div class="overlay" (click)="closeEditor()">
+    <div class="drawer" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header>
+        <h2>{{ editingId() ? 'تعديل منتج' : 'منتج جديد' }}</h2>
+        <button type="button" class="btn btn-ghost" (click)="closeEditor()">إغلاق</button>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="saveProduct()">
+        <div class="grid-2">
+          <label>العنوان<input formControlName="title" /></label>
+          <label>رمز SKU<input formControlName="sku" /></label>
+          <label>الماركة<input formControlName="brand" /></label>
+          <label>الموديل<input formControlName="model" /></label>
+          <label>الفئة<input formControlName="category" /></label>
+          <label>
+            درجة الجودة
+            <select formControlName="qualityGrade">
+              @for (g of grades; track g) {
+                <option [value]="g">{{ gradeLabel(g) }}</option>
+              }
+            </select>
+          </label>
+          <label>المخزون<input type="number" min="0" formControlName="stockQuantity" /></label>
+          <label>السعر الأساسي<input type="number" min="0" step="0.01" formControlName="basePrice" /></label>
+        </div>
+
+        <label class="full">رابط الصورة<input formControlName="imageUrl" /></label>
+
+        <label class="active-toggle">
+          <input type="checkbox" formControlName="isActive" />
+          <span>منتج نشط (يظهر في كتالوج الجملة)</span>
+        </label>
+
+        <fieldset class="tiers" formArrayName="tieredPricing">
+          <legend>
+            شرائح أسعار الجملة
+            <button type="button" class="btn btn-primary btn-sm" (click)="addTier()">إضافة شريحة</button>
+          </legend>
+          <p class="hint">أضف عدداً غير محدود من الشرائح. أعلى <code>minQty</code> مطابقة تُطبَّق عند الدفع.</p>
+
+          @for (tier of tiers.controls; track $index; let i = $index) {
+            <div class="tier-row" [formGroupName]="i">
+              <label>
+                الحد الأدنى للكمية
+                <input type="number" min="1" formControlName="minQty" />
+              </label>
+              <label>
+                سعر الوحدة
+                <input type="number" min="0" step="0.01" formControlName="price" />
+              </label>
+              <button type="button" class="btn btn-danger btn-sm" (click)="removeTier(i)">
+                حذف
+              </button>
+            </div>
+          } @empty {
+            <p class="muted">لا توجد شرائح — سيُستخدم السعر الأساسي فقط.</p>
+          }
+        </fieldset>
+
+        <div class="drawer__footer">
+          <button type="button" class="btn btn-ghost" (click)="closeEditor()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" [disabled]="savingId()">
+            {{ savingId() ? 'جارٍ الحفظ…' : 'حفظ المنتج' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

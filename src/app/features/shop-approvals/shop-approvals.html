@@ -1,0 +1,114 @@
+<section class="approvals" dir="rtl">
+  <header class="approvals__header">
+    <div>
+      <h1>اعتماد المتاجر</h1>
+      <p>مراجعة طلبات تسجيل الجملة وصور البطاقة التجارية.</p>
+    </div>
+    <button type="button" class="btn btn-ghost" (click)="load()" [disabled]="loading()">
+      {{ loading() ? 'جارٍ التحديث…' : 'تحديث' }}
+    </button>
+  </header>
+
+  @if (error()) {
+    <p class="approvals__error" role="alert">{{ error() }}</p>
+  }
+
+  <div class="approvals__table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>الصورة</th>
+          <th>المتجر</th>
+          <th>المالك</th>
+          <th>الجوال</th>
+          <th>المدينة</th>
+          <th>تاريخ الطلب</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading() && shops().length === 0) {
+          <tr>
+            <td colspan="7" class="muted">جارٍ تحميل المتاجر المعلقة…</td>
+          </tr>
+        } @else if (shops().length === 0) {
+          <tr>
+            <td colspan="7" class="muted">لا توجد طلبات معلقة.</td>
+          </tr>
+        } @else {
+          @for (shop of shops(); track shop.id) {
+            <tr>
+              <td>
+                <button type="button" class="thumb" (click)="openPreview(photoUrl(shop.commercialRegPhotoUrl))">
+                  <img
+                    [src]="photoUrl(shop.commercialRegPhotoUrl)"
+                    [alt]="'بطاقة ' + shop.shopName"
+                    width="56"
+                    height="56"
+                  />
+                </button>
+              </td>
+              <td>
+                <strong>{{ shop.shopName }}</strong>
+                <div class="sub">{{ shop.address }}</div>
+              </td>
+              <td>{{ shop.fullName }}</td>
+              <td class="mono">{{ shop.phone }}</td>
+              <td>{{ shop.city }}</td>
+              <td>{{ shop.createdAt | date: 'mediumDate' }}</td>
+              <td class="actions">
+                <button
+                  type="button"
+                  class="btn btn-approve"
+                  (click)="approve(shop)"
+                  [disabled]="busyId() === shop.id"
+                >
+                  اعتماد
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-reject"
+                  (click)="openReject(shop)"
+                  [disabled]="busyId() === shop.id"
+                >
+                  رفض
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+@if (rejectTarget(); as shop) {
+  <div class="modal-overlay" (click)="closeReject()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reject-title" (click)="$event.stopPropagation()">
+      <h2 id="reject-title">رفض {{ shop.shopName }}؟</h2>
+      <p>اكتب سبباً سيظهر لصاحب المتجر في شاشة الانتظار.</p>
+      <textarea
+        [(ngModel)]="rejectReason"
+        rows="4"
+        placeholder="مثال: صورة السجل التجاري غير واضحة"
+      ></textarea>
+      <div class="modal__actions">
+        <button type="button" class="btn btn-ghost" (click)="closeReject()">إلغاء</button>
+        <button
+          type="button"
+          class="btn btn-reject"
+          (click)="confirmReject()"
+          [disabled]="rejectReason.trim().length < 3 || busyId() === shop.id"
+        >
+          تأكيد الرفض
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (previewSrc()) {
+  <div class="modal-overlay" (click)="closePreview()">
+    <img class="preview" [src]="previewSrc()!" alt="معاينة البطاقة التجارية" (click)="$event.stopPropagation()" />
+  </div>
+}

@@ -1,0 +1,72 @@
+<section class="center" dir="rtl">
+  <header>
+    <div>
+      <h1>مركز الطلبات الخاصة</h1>
+      <p>سعّر القطع النادرة ورد على أصحاب المتاجر — يُرسل إشعار تلقائياً.</p>
+    </div>
+    <div class="filters">
+      <button type="button" [class.on]="filter() === 'PENDING'" (click)="setFilter('PENDING')">قيد الانتظار</button>
+      <button type="button" [class.on]="filter() === 'QUOTED'" (click)="setFilter('QUOTED')">تم التسعير</button>
+      <button type="button" [class.on]="filter() === 'FULFILLED'" (click)="setFilter('FULFILLED')">تم التوفير</button>
+      <button type="button" [class.on]="filter() === ''" (click)="setFilter('')">الكل</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  <div class="grid">
+    @if (loading()) {
+      <p class="muted">جارٍ التحميل…</p>
+    } @else {
+      @for (row of rows(); track row.id) {
+        <article>
+          <img [src]="photoUrl(row.photoUrl)" [alt]="row.partName" />
+          <div>
+            <strong>{{ row.partName }}</strong>
+            <small>{{ row.shopName }} · {{ row.deviceModel }} · ×{{ row.quantity }}</small>
+            <span class="chip">{{ statusLabel(row.status) }}</span>
+            <p>السعر المستهدف {{ row.targetPrice | currency: 'EGP':'symbol-narrow':'1.2-2' }}</p>
+            @if (row.quotePrice != null) {
+              <p class="quoted">عرض السعر {{ row.quotePrice | currency: 'EGP':'symbol-narrow':'1.2-2' }}</p>
+            }
+          </div>
+          <div class="actions">
+            <button type="button" class="btn" (click)="open(row)">تسعير / رد</button>
+            @if (row.status === 'QUOTED') {
+              <button type="button" class="btn primary" (click)="markFulfilled(row)">تعليم التوفير</button>
+            }
+          </div>
+        </article>
+      } @empty {
+        <p class="muted">لا توجد طلبات في هذا التصفية.</p>
+      }
+    }
+  </div>
+</section>
+
+@if (selected(); as row) {
+  <div class="overlay" (click)="selected.set(null)">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>تسعير · {{ row.partName }}</h2>
+      <p>{{ row.shopName }} · المستهدف {{ row.targetPrice | currency: 'EGP':'symbol-narrow':'1.2-2' }}</p>
+      <label>
+        سعر العرض
+        <input type="number" min="0" step="0.01" [(ngModel)]="quotePrice" />
+      </label>
+      <label>
+        موعد الوصول المتوقع
+        <input type="date" [(ngModel)]="estimatedArrival" />
+      </label>
+      <label>
+        رد لصاحب المتجر
+        <textarea rows="4" [(ngModel)]="adminReply" placeholder="ملاحظات التوفر، البدائل…"></textarea>
+      </label>
+      <div class="modal__actions">
+        <button type="button" class="btn" (click)="selected.set(null)">إلغاء</button>
+        <button type="button" class="btn primary" (click)="sendQuote()">إرسال العرض + إشعار</button>
+      </div>
+    </div>
+  </div>
+}

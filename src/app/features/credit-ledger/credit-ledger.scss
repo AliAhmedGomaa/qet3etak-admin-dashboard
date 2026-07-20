@@ -1,0 +1,184 @@
+.ledger {
+  display: grid;
+  gap: 1rem;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+
+header p {
+  margin: 0.3rem 0 0;
+  color: #64748b;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.table-wrap,
+.panel {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+th,
+td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: start;
+}
+
+th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+tbody tr {
+  cursor: pointer;
+}
+
+tbody tr:hover,
+tbody tr.active {
+  background: #f0fdf8;
+}
+
+td strong {
+  display: block;
+}
+
+td small {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.panel {
+  padding: 1.1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.sub {
+  margin: 0;
+  color: #64748b;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+input {
+  min-height: 2.6rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.7rem;
+  font: inherit;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+}
+
+.btn {
+  min-height: 2.6rem;
+  border: 0;
+  border-radius: 0.65rem;
+  padding: 0 0.9rem;
+  background: #f1f5f9;
+  color: #334155;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: #10b880;
+  color: #fff;
+}
+
+.panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  max-height: 22rem;
+  overflow: auto;
+}
+
+.panel li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.7rem;
+  background: #f8fafc;
+  font-size: 0.8rem;
+}
+
+.panel small,
+.panel time {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  margin-top: 0.15rem;
+}
+
+.neg {
+  color: #0d9a6a;
+  font-weight: 700;
+}
+
+.err {
+  background: #fef2f2;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+}
+
+.muted {
+  text-align: center;
+  color: #94a3b8;
+}
+
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
