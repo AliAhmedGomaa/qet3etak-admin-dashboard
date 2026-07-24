@@ -58,6 +58,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'delivery-guys',
+        loadComponent: () =>
+          import('./features/delivery-guys/delivery-guys').then(
+            (m) => m.DeliveryGuysPage,
+          ),
+      },
+      {
         path: 'special-requests',
         loadComponent: () =>
           import('./features/special-requests/special-requests-center').then(

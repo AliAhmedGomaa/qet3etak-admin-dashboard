@@ -48,6 +48,9 @@ export interface AdminOrder {
   paymentMethod: string;
   total: number;
   items: Array<{ title: string; quantity: number; lineTotal: number }>;
+  deliveryGuyId?: string;
+  deliveryGuyName?: string;
+  deliveryFee?: number;
   createdAt?: string;
 }
 
@@ -102,9 +105,22 @@ export class AdminCommerceService {
     });
   }
 
-  updateOrderStatus(id: string, status: OrderStatus, note?: string) {
+  updateOrderStatus(
+    id: string,
+    status: OrderStatus,
+    note?: string,
+    deliveryGuyId?: string,
+  ) {
     return this.http.patch<AdminOrder>(`${this.api}/admin/orders/${id}/status`, {
       status,
+      note,
+      deliveryGuyId,
+    });
+  }
+
+  assignDelivery(id: string, deliveryGuyId: string, note?: string) {
+    return this.http.patch<AdminOrder>(`${this.api}/admin/orders/${id}/delivery`, {
+      deliveryGuyId,
       note,
     });
   }

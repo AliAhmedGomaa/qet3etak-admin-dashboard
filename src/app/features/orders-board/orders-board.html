@@ -80,6 +80,21 @@
                     <li>+{{ order.items.length - 2 }} المزيد</li>
                   }
                 </ul>
+                @if (order.deliveryGuyName) {
+                  <p class="courier">
+                    {{ order.deliveryGuyName }}
+                    @if (order.deliveryFee != null) {
+                      · {{ order.deliveryFee | currency: 'EGP':'symbol-narrow':'1.0-2' }}
+                    }
+                  </p>
+                }
+                <button
+                  type="button"
+                  class="assign-btn"
+                  (click)="openAssign(order); $event.stopPropagation()"
+                >
+                  {{ order.deliveryGuyId ? 'تغيير المندوب' : 'تعيين مندوب' }}
+                </button>
               </article>
             } @empty {
               <p class="empty">أسقط الطلبات هنا</p>
@@ -99,4 +114,36 @@
     ariaLabel="صفحات الطلبات"
     (pageChange)="goPage($event)"
   />
+
+  @if (assignTarget(); as order) {
+    <div class="modal" role="dialog" aria-modal="true" (click)="closeAssign()">
+      <div class="modal__card" (click)="$event.stopPropagation()">
+        <header>
+          <h2>تعيين مندوب توصيل</h2>
+          <button type="button" class="btn btn-ghost" (click)="closeAssign()">إغلاق</button>
+        </header>
+        <p class="modal__hint">الطلب {{ order.orderNumber }} — {{ order.shopName }}</p>
+        <label>
+          المندوب
+          <select [(ngModel)]="assignGuyId">
+            <option value="">اختر مندوباً…</option>
+            @for (guy of deliveryGuys(); track guy.id) {
+              <option [value]="guy.id">{{ guy.fullName }} — {{ guy.phone }}</option>
+            }
+          </select>
+        </label>
+        <footer>
+          <button type="button" class="btn btn-ghost" (click)="closeAssign()">إلغاء</button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="!assignGuyId || assigning()"
+            (click)="confirmAssign()"
+          >
+            {{ assigning() ? 'جارٍ الحفظ…' : 'حفظ' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
 </section>

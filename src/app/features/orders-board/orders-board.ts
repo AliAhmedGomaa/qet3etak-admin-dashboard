@@ -6,11 +6,16 @@ import {
   signal,
 } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import {
   AdminCommerceService,
   AdminOrder,
   OrderStatus,
 } from '../../core/commerce/admin-commerce.service';
+import {
+  DeliveryGuy,
+  DeliveryGuysAdminService,
+} from '../../core/delivery/delivery-guys-admin.service';
 import { orderStatusAr, paymentMethodAr } from '../../core/i18n/ar-labels';
 import { AdminPager } from '../../shared/admin-pager/admin-pager';
 
@@ -23,16 +28,18 @@ const COLUMNS: Array<{ status: OrderStatus; title: string }> = [
 
 @Component({
   selector: 'app-orders-board',
-  imports: [CurrencyPipe, DatePipe, AdminPager],
+  imports: [CurrencyPipe, DatePipe, FormsModule, AdminPager],
   templateUrl: './orders-board.html',
   styleUrl: './orders-board.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrdersBoard implements OnInit {
   private readonly api = inject(AdminCommerceService);
+  private readonly deliveryApi = inject(DeliveryGuysAdminService);
 
   protected readonly columns = COLUMNS;
   protected readonly orders = signal<AdminOrder[]>([]);
+  protected readonly deliveryGuys = signal<DeliveryGuy[]>([]);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly draggingId = signal<string | null>(null);
@@ -43,8 +50,16 @@ export class OrdersBoard implements OnInit {
   protected searchDraft = '';
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
+  protected readonly assignTarget = signal<AdminOrder | null>(null);
+  protected readonly pendingStatus = signal<OrderStatus | null>(null);
+  protected assignGuyId = '';
+  protected readonly assigning = signal(false);
+
   ngOnInit(): void {
     this.load();
+    this.deliveryApi.list({ page: 1, limit: 100, status: 'ACTIVE' }).subscribe({
+      next: (res) => this.deliveryGuys.set(res.items),
+    });
   }
 
   protected load(): void {
@@ -121,6 +136,59 @@ export class OrdersBoard implements OnInit {
     const order = this.orders().find((o) => o.id === id);
     if (!order || order.status === status) return;
 
+    if (status === 'SHIPPED' && !order.deliveryGuyId && this.deliveryGuys().length) {
+      this.assignTarget.set(order);
+      this.pendingStatus.set('SHIPPED');
+      this.assignGuyId = '';
+      return;
+    }
+
+    this.applyStatus(id, status);
+  }
+
+  protected onDragEnd(): void {
+    this.draggingId.set(null);
+  }
+
+  protected openAssign(order: AdminOrder): void {
+    this.assignTarget.set(order);
+    this.pendingStatus.set(null);
+    this.assignGuyId = order.deliveryGuyId || '';
+  }
+
+  protected closeAssign(): void {
+    this.assignTarget.set(null);
+    this.pendingStatus.set(null);
+    this.assignGuyId = '';
+  }
+
+  protected confirmAssign(): void {
+    const order = this.assignTarget();
+    if (!order || !this.assignGuyId) return;
+    this.assigning.set(true);
+    const nextStatus = this.pendingStatus();
+
+    const request$ = nextStatus
+      ? this.api.updateOrderStatus(order.id, nextStatus, undefined, this.assignGuyId)
+      : this.api.assignDelivery(order.id, this.assignGuyId);
+
+    request$.subscribe({
+      next: (updated) => {
+        this.assigning.set(false);
+        this.closeAssign();
+        this.orders.update((list) =>
+          list.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)),
+        );
+      },
+      error: () => {
+        this.assigning.set(false);
+        this.error.set('فشل تعيين المندوب');
+        this.load();
+      },
+    });
+  }
+
+  private applyStatus(id: string, status: OrderStatus): void {
     this.orders.update((list) =>
       list.map((o) => (o.id === id ? { ...o, status } : o)),
     );
@@ -136,9 +204,5 @@ export class OrdersBoard implements OnInit {
         this.load();
       },
     });
-  }
-
-  protected onDragEnd(): void {
-    this.draggingId.set(null);
   }
 }

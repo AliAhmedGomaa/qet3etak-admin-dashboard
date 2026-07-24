@@ -239,3 +239,100 @@ header p {
   font-weight: 600;
   color: #64748b;
 }
+
+.courier {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.assign-btn {
+  margin-top: 0.55rem;
+  width: 100%;
+  min-height: 2rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #475569;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.assign-btn:hover {
+  border-color: #10b880;
+  color: #047857;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.modal__card {
+  width: min(24rem, 100%);
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1.15rem;
+  display: grid;
+  gap: 0.85rem;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+
+.modal__card header,
+.modal__card footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal__card h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.modal__hint {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.modal__card label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.modal__card select {
+  min-height: 2.6rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.65rem;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+}
+
+.btn-ghost {
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+}
+
+.btn-primary {
+  background: #10b880;
+  color: #fff;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
