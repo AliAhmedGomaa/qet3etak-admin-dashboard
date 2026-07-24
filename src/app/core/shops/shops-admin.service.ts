@@ -33,14 +33,6 @@ export class ShopsAdminService {
     return this.http.get<Paginated<ShopUser>>(this.base, { params: httpParams });
   }
 
-  /** @deprecated Prefer list({ status, page, limit }) — kept for shop-approvals */
-  listByStatus(
-    status?: UserStatus,
-    params: PageParams = {},
-  ): Observable<Paginated<ShopUser>> {
-    return this.list({ ...params, status });
-  }
-
   get(id: string): Observable<ShopUser> {
     return this.http.get<ShopUser>(`${this.base}/${id}`);
   }

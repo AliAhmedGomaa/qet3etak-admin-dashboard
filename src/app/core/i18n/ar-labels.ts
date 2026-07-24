@@ -18,6 +18,12 @@ export const specialStatusAr: Record<string, string> = {
   FULFILLED: 'تم التوفير',
 };
 
+export const returnStatusAr: Record<string, string> = {
+  PENDING: 'قيد المراجعة',
+  APPROVED: 'مقبول',
+  REJECTED: 'مرفوض',
+};
+
 export const paymentMethodAr: Record<string, string> = {
   CREDIT: 'آجل',
   CASH_ON_DELIVERY: 'عند الاستلام',

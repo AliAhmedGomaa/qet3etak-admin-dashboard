@@ -71,16 +71,17 @@
 }
 
 .drop {
+  position: relative;
   display: grid;
   place-items: center;
   gap: 0.35rem;
-  min-height: 8.5rem;
+  min-height: 8rem;
   border: 1.5px dashed #cbd5e1;
   border-radius: 0.9rem;
   background: #f8fafc;
   cursor: pointer;
   text-align: center;
-  padding: 1.25rem;
+  padding: 1.1rem;
   transition: border-color 0.15s, background 0.15s;
 }
 
