@@ -1,3 +1,62 @@
+/* ——— Qet3etak Admin · design tokens + dark theme ——— */
+
+:root {
+  --brand: #0f172a;
+  --accent: #10b880;
+  --accent-strong: #0d9a6a;
+  --accent-soft: rgba(16, 184, 128, 0.14);
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --surface-elevated: #ffffff;
+  --ink: #0f172a;
+  --ink-muted: #64748b;
+  --ink-soft: #94a3b8;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --danger: #b91c1c;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
+  --warning-bg: #fffbeb;
+  --warning-ink: #92400e;
+  --overlay: rgba(15, 23, 42, 0.45);
+  --shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  --chip-ok-bg: #d1fae5;
+  --chip-ok-ink: #065f46;
+  --input-bg: #f8fafc;
+  --thead-bg: #f8fafc;
+  --row-hover: #f1f5f9;
+  --scroll-thumb: #cbd5e1;
+}
+
+html[data-theme='dark'] {
+  --brand: #e2e8f0;
+  --accent: #34d399;
+  --accent-strong: #10b880;
+  --accent-soft: rgba(52, 211, 153, 0.16);
+  --surface: #1e293b;
+  --surface-muted: #0f172a;
+  --surface-elevated: #243044;
+  --ink: #e2e8f0;
+  --ink-muted: #94a3b8;
+  --ink-soft: #64748b;
+  --border: #334155;
+  --border-strong: #475569;
+  --danger: #fca5a5;
+  --danger-bg: rgba(127, 29, 29, 0.35);
+  --danger-border: rgba(248, 113, 113, 0.35);
+  --warning-bg: rgba(120, 53, 15, 0.35);
+  --warning-ink: #fcd34d;
+  --overlay: rgba(2, 6, 23, 0.65);
+  --shadow: 0 12px 32px rgba(2, 6, 23, 0.45);
+  --chip-ok-bg: rgba(16, 184, 128, 0.2);
+  --chip-ok-ink: #6ee7b7;
+  --input-bg: #0f172a;
+  --thead-bg: #1a2436;
+  --row-hover: rgba(148, 163, 184, 0.08);
+  --scroll-thumb: #475569;
+  color-scheme: dark;
+}
+
 *,
 *::before,
 *::after {
@@ -10,8 +69,8 @@ body {
   min-height: 100%;
   direction: rtl;
   font-family: 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, sans-serif;
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--surface-muted);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -26,4 +85,142 @@ table {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* ——— Dark theme: cover encapsulated feature panels without per-file rewrites ——— */
+html[data-theme='dark'] {
+  .login {
+    background:
+      radial-gradient(ellipse at top, rgba(52, 211, 153, 0.12), transparent 50%),
+      var(--surface-muted) !important;
+  }
+
+  .login h1,
+  .login__card h1 {
+    color: var(--ink) !important;
+  }
+
+  .login label {
+    color: var(--ink-muted) !important;
+  }
+
+  .login button[type='submit'] {
+    background: var(--accent) !important;
+    color: #042f1e !important;
+  }
+
+  .login .notice {
+    background: var(--warning-bg) !important;
+    color: var(--warning-ink) !important;
+  }
+
+  .table-wrap,
+  .pager,
+  .search,
+  .role-card,
+  .modal__card,
+  .drawer,
+  .filter select,
+  .login__card,
+  article.card,
+  .card,
+  .panel,
+  .kpi,
+  .kpis > *,
+  .thread,
+  .composer,
+  .chat-pane,
+  .board-col,
+  .inv-card,
+  .empty-state {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--ink);
+  }
+
+  th {
+    background: var(--thead-bg) !important;
+    color: var(--ink-muted) !important;
+    border-color: var(--border) !important;
+  }
+
+  td {
+    color: var(--ink) !important;
+    border-color: var(--border) !important;
+  }
+
+  tr:hover td {
+    background: var(--row-hover);
+  }
+
+  input,
+  select,
+  textarea {
+    background: var(--input-bg) !important;
+    border-color: var(--border) !important;
+    color: var(--ink) !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--ink-soft);
+  }
+
+  .btn,
+  .btn-ghost,
+  .pager__nav,
+  .chip--off,
+  .bell,
+  .menu-btn {
+    background: var(--surface-elevated) !important;
+    border-color: var(--border) !important;
+    color: var(--ink) !important;
+  }
+
+  .btn-primary,
+  .pager__page.is-active {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #042f1e !important;
+  }
+
+  .btn-danger {
+    color: var(--danger) !important;
+    border-color: var(--danger-border) !important;
+  }
+
+  .err {
+    background: var(--danger-bg) !important;
+    color: var(--danger) !important;
+  }
+
+  .muted,
+  .hint,
+  header p,
+  .users__header p,
+  .delivery__header p,
+  .shops__header p,
+  .branches__header p {
+    color: var(--ink-muted) !important;
+  }
+
+  .overlay,
+  .modal,
+  .modal-overlay,
+  .scrim {
+    background: var(--overlay) !important;
+  }
+
+  .chip:not(.chip--off) {
+    background: var(--chip-ok-bg) !important;
+    color: var(--chip-ok-ink) !important;
+  }
+
+  .toolbar {
+    color: var(--ink-muted);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scroll-thumb);
+  }
 }

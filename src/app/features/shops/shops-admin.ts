@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -12,7 +13,10 @@ import {
   Validators,
 } from '@angular/forms';
 import { ShopUser, UserStatus } from '../../core/auth/auth.models';
+import { AuthService } from '../../core/auth/auth.service';
 import { ShopsAdminService } from '../../core/shops/shops-admin.service';
+import { BranchesAdminService } from '../../core/branches/branches-admin.service';
+import { BranchOption } from '../../core/branches/branch.models';
 import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
 import { AdminPager } from '../../shared/admin-pager/admin-pager';
 
@@ -20,6 +24,7 @@ const STATUS_LABELS: Record<UserStatus, string> = {
   PENDING_VERIFICATION: 'قيد المراجعة',
   APPROVED: 'معتمد',
   REJECTED: 'مرفوض',
+  SUSPENDED: 'موقوف',
 };
 
 @Component({
@@ -32,7 +37,13 @@ const STATUS_LABELS: Record<UserStatus, string> = {
 export class ShopsAdmin implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(ShopsAdminService);
+  private readonly branchesApi = inject(BranchesAdminService);
+  private readonly auth = inject(AuthService);
 
+  protected readonly isSuperAdmin = computed(
+    () => this.auth.user()?.role === 'ADMIN',
+  );
+  protected readonly branchOptions = signal<BranchOption[]>([]);
   protected readonly shops = signal<ShopUser[]>([]);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -48,6 +59,8 @@ export class ShopsAdmin implements OnInit {
   protected readonly statusFilter = signal<UserStatus | ''>('');
   protected readonly deleteTarget = signal<ShopUser | null>(null);
   protected readonly deleting = signal(false);
+  protected readonly suspendTarget = signal<ShopUser | null>(null);
+  protected readonly statusBusy = signal(false);
   protected readonly previewSrc = signal<string | null>(null);
 
   protected readonly statusOptions: Array<{ value: UserStatus | ''; label: string }> =
@@ -55,6 +68,7 @@ export class ShopsAdmin implements OnInit {
       { value: '', label: 'الكل' },
       { value: 'PENDING_VERIFICATION', label: STATUS_LABELS.PENDING_VERIFICATION },
       { value: 'APPROVED', label: STATUS_LABELS.APPROVED },
+      { value: 'SUSPENDED', label: STATUS_LABELS.SUSPENDED },
       { value: 'REJECTED', label: STATUS_LABELS.REJECTED },
     ];
 
@@ -68,12 +82,22 @@ export class ShopsAdmin implements OnInit {
     commercialRegPhotoUrl: [''],
     status: this.fb.nonNullable.control<UserStatus>('APPROVED'),
     rejectionReason: [''],
+    branchId: [''],
   });
 
   protected readonly photoUrl = (path: string) => this.api.photoUrl(path);
 
   ngOnInit(): void {
     this.load();
+    this.branchesApi.options().subscribe({
+      next: (items) => this.branchOptions.set(items),
+    });
+  }
+
+  protected branchLabel(branchId: string | null | undefined): string {
+    if (!branchId) return 'المركز / غير معيّن';
+    const b = this.branchOptions().find((x) => x.id === branchId);
+    return b ? `${b.name} (${b.code})` : 'فرع';
   }
 
   protected statusLabel(status: UserStatus): string {
@@ -153,6 +177,7 @@ export class ShopsAdmin implements OnInit {
       commercialRegPhotoUrl: '',
       status: 'APPROVED',
       rejectionReason: '',
+      branchId: '',
     });
     this.form.controls.password.setValidators([
       Validators.required,
@@ -174,6 +199,7 @@ export class ShopsAdmin implements OnInit {
       commercialRegPhotoUrl: shop.commercialRegPhotoUrl || '',
       status: shop.status,
       rejectionReason: shop.rejectionReason || '',
+      branchId: shop.branchId || '',
     });
     this.form.controls.password.clearValidators();
     this.form.controls.password.setValidators([Validators.minLength(6)]);
@@ -224,6 +250,7 @@ export class ShopsAdmin implements OnInit {
         value.status === 'REJECTED'
           ? value.rejectionReason.trim()
           : undefined,
+      branchId: value.branchId.trim() || null,
       ...(value.password.trim()
         ? { password: value.password.trim() }
         : {}),
@@ -254,14 +281,41 @@ export class ShopsAdmin implements OnInit {
   }
 
   protected setStatus(shop: ShopUser, status: UserStatus): void {
-    if (status === 'REJECTED') {
-      this.openEdit(shop);
-      this.form.patchValue({ status: 'REJECTED' });
+    if (status === 'SUSPENDED') {
+      this.suspendTarget.set(shop);
       return;
     }
+    this.applyStatus(shop, status);
+  }
+
+  protected confirmSuspend(): void {
+    const shop = this.suspendTarget();
+    if (!shop) return;
+    this.applyStatus(shop, 'SUSPENDED', () => this.suspendTarget.set(null));
+  }
+
+  protected cancelSuspend(): void {
+    this.suspendTarget.set(null);
+  }
+
+  private applyStatus(
+    shop: ShopUser,
+    status: UserStatus,
+    onDone?: () => void,
+  ): void {
+    this.statusBusy.set(true);
+    this.error.set(null);
     this.api.updateStatus(shop.id, status).subscribe({
-      next: () => this.load(),
-      error: () => this.error.set('تعذر تحديث حالة المتجر'),
+      next: () => {
+        this.statusBusy.set(false);
+        onDone?.();
+        this.load();
+      },
+      error: () => {
+        this.statusBusy.set(false);
+        onDone?.();
+        this.error.set('تعذر تحديث حالة المتجر');
+      },
     });
   }
 

@@ -243,13 +243,15 @@ export class ReportsService {
   /** Download CSV for a report type (backend `format=csv`). */
   downloadCsv(tab: Exclude<ReportTab, 'summary'>, q: ReportQuery = {}): Observable<void> {
     const path = tab;
-    let params = this.params(q).set('format', 'csv');
-    if (tab === 'inventory') {
-      params = params.set(
-        'lowStockThreshold',
-        String(q.lowStockThreshold ?? 10),
-      );
-    }
+    let params =
+      tab === 'inventory'
+        ? new HttpParams()
+            .set('format', 'csv')
+            .set('lowStockThreshold', String(q.lowStockThreshold ?? 10))
+            .set('page', String(q.page ?? 1))
+            .set('limit', String(q.limit ?? 50))
+        : this.params(q).set('format', 'csv');
+
     return this.http
       .get(`${this.base}/${path}`, {
         params,

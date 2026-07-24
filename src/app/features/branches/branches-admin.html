@@ -1,0 +1,204 @@
+<section class="branches" dir="rtl">
+  <header class="branches__header">
+    <div>
+      <h1>الفروع</h1>
+      <p>إدارة فروع المنصة وتعيين مديري الفروع.</p>
+    </div>
+    <div class="branches__actions">
+      <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
+      <button type="button" class="btn btn-primary" (click)="openCreate()">إضافة فرع</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  <div class="toolbar">
+    <label class="search">
+      <input
+        type="search"
+        [value]="searchDraft"
+        (input)="onSearchInput($any($event.target).value)"
+        placeholder="ابحث بالاسم أو الكود أو المدينة…"
+        aria-label="بحث في الفروع"
+      />
+      @if (searchDraft) {
+        <button type="button" class="search__clear" (click)="clearSearch()">مسح</button>
+      }
+    </label>
+
+    <label class="filter">
+      <span>الحالة</span>
+      <select
+        [value]="statusFilter()"
+        (change)="setStatusFilter($any($event.target).value)"
+        aria-label="تصفية حسب الحالة"
+      >
+        <option value="">الكل</option>
+        <option value="ACTIVE">نشط</option>
+        <option value="INACTIVE">متوقف</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>الفرع</th>
+          <th>الكود</th>
+          <th>المدينة</th>
+          <th>الجوال</th>
+          <th>مدير الفرع</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="7" class="muted">جارٍ التحميل…</td></tr>
+        } @else if (branches().length === 0) {
+          <tr>
+            <td colspan="7" class="muted">
+              {{ searchQuery() || statusFilter() ? 'لا توجد نتائج.' : 'لا توجد فروع بعد.' }}
+            </td>
+          </tr>
+        } @else {
+          @for (branch of branches(); track branch.id) {
+            <tr>
+              <td>
+                <strong>{{ branch.name }}</strong>
+                <small>{{ branch.address }}</small>
+              </td>
+              <td dir="ltr">{{ branch.code }}</td>
+              <td>{{ branch.city }}</td>
+              <td dir="ltr">{{ branch.phone || '—' }}</td>
+              <td>
+                @if (branch.manager; as m) {
+                  <strong>{{ m.fullName }}</strong>
+                  <small dir="ltr">{{ m.phone }}</small>
+                } @else {
+                  <span class="muted">غير معيّن</span>
+                }
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="chip"
+                  [class.chip--off]="branch.status !== 'ACTIVE'"
+                  (click)="toggleStatus(branch)"
+                >
+                  {{ branch.status === 'ACTIVE' ? 'نشط' : 'متوقف' }}
+                </button>
+              </td>
+              <td class="row-actions">
+                <button type="button" class="btn btn-ghost" (click)="openManager(branch)">المدير</button>
+                <button type="button" class="btn btn-ghost" (click)="openEdit(branch)">تعديل</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="20"
+    itemLabel="فرع"
+    ariaLabel="صفحات الفروع"
+    (pageChange)="goPage($event)"
+  />
+</section>
+
+@if (editorOpen()) {
+  <div class="overlay" (click)="closeEditor()">
+    <div class="drawer" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header>
+        <h2>{{ editingId() ? 'تعديل فرع' : 'فرع جديد' }}</h2>
+        <button type="button" class="btn btn-ghost" (click)="closeEditor()">إغلاق</button>
+      </header>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <label>
+          اسم الفرع
+          <input formControlName="name" />
+        </label>
+        <label>
+          الكود
+          <input formControlName="code" dir="ltr" placeholder="CAI-DT" />
+        </label>
+        <label>
+          المدينة
+          <input formControlName="city" />
+        </label>
+        <label>
+          العنوان
+          <input formControlName="address" />
+        </label>
+        <label>
+          الجوال
+          <input formControlName="phone" dir="ltr" />
+        </label>
+        <label>
+          ملاحظات
+          <textarea formControlName="notes" rows="3"></textarea>
+        </label>
+        <label>
+          الحالة
+          <select formControlName="status">
+            <option value="ACTIVE">نشط</option>
+            <option value="INACTIVE">متوقف</option>
+          </select>
+        </label>
+        <footer>
+          <button type="button" class="btn btn-ghost" (click)="closeEditor()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'جارٍ الحفظ…' : 'حفظ' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+@if (managerTarget(); as branch) {
+  <div class="overlay" (click)="closeManager()">
+    <div class="drawer" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header>
+        <h2>تعيين مدير الفرع</h2>
+        <button type="button" class="btn btn-ghost" (click)="closeManager()">إغلاق</button>
+      </header>
+      <p class="muted" style="text-align: start; margin: 0 0 0.75rem">
+        اختر مستخدماً ليصبح مدير فرع «{{ branch.name }}»، أو اترك الحقل فارغاً لإلغاء التعيين.
+      </p>
+      <label class="manager-pick">
+        <span>المدير</span>
+        <select
+          [value]="managerUserId()"
+          (change)="managerUserId.set($any($event.target).value)"
+        >
+          <option value="">— بدون مدير —</option>
+          @for (user of managers(); track user.id) {
+            <option [value]="user.id">{{ user.fullName }} · {{ user.phone }}</option>
+          }
+          @if (managerOutsideList(branch) && branch.manager) {
+            <option [value]="branch.manager.id">
+              {{ branch.manager.fullName }} · {{ branch.manager.phone }}
+            </option>
+          }
+        </select>
+      </label>
+      <footer style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem">
+        <button type="button" class="btn btn-ghost" (click)="closeManager()" [disabled]="assigning()">
+          إلغاء
+        </button>
+        <button type="button" class="btn btn-primary" (click)="confirmManager()" [disabled]="assigning()">
+          {{ assigning() ? 'جارٍ الحفظ…' : 'حفظ التعيين' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}

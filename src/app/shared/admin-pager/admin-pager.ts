@@ -22,7 +22,9 @@ export class AdminPager {
 
   readonly pageChange = output<number>();
 
-  protected readonly visible = computed(() => this.totalPages() > 1);
+  protected readonly visible = computed(
+    () => this.totalPages() > 1 || this.total() > this.limit(),
+  );
 
   protected readonly rangeLabel = computed(() => {
     const total = this.total();

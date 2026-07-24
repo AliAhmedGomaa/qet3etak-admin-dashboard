@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -9,8 +10,29 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
 import { ChatService } from '../core/chat/chat.service';
+import { ReturnsAdminService } from '../core/returns/returns-admin.service';
 import { PushNotificationService } from '../core/push/push-notification.service';
 import { PwaInstallService } from '../core/pwa/pwa-install.service';
+import { ThemeService } from '../core/theme/theme.service';
+
+type NavItem = {
+  path: string;
+  label: string;
+  icon: string;
+  /** If set, only these roles see the item. Omit = all admin-panel roles. */
+  roles?: Array<'ADMIN' | 'MANAGER' | 'STAFF' | 'BRANCH_MANAGER'>;
+};
+
+/** Paths branch managers may use (API still enforces scope). */
+const BRANCH_MANAGER_PATHS = new Set([
+  '/shops',
+  '/credit',
+  '/financials',
+  '/reports',
+  '/orders-board',
+  '/invoices',
+  '/returns',
+]);
 
 @Component({
   selector: 'app-admin-shell',
@@ -35,7 +57,7 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
 
         <nav class="nav">
           <span class="nav__label">القائمة</span>
-          @for (item of navItems; track item.path) {
+          @for (item of visibleNavItems(); track item.path) {
             <a [routerLink]="item.path" routerLinkActive="active" (click)="navOpen.set(false)">
               <svg class="nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                 <path [attr.d]="item.icon" stroke-linecap="round" stroke-linejoin="round" />
@@ -43,6 +65,9 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
               <span>{{ item.label }}</span>
               @if (item.path === '/chat' && chat.totalUnread() > 0) {
                 <em class="nav__badge">{{ chat.totalUnread() }}</em>
+              }
+              @if (item.path === '/returns' && returns.pendingCount() > 0) {
+                <em class="nav__badge">{{ returns.pendingCount() }}</em>
               }
             </a>
           }
@@ -69,6 +94,26 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
             <span class="toolbar__name">{{ auth.user()?.fullName }}</span>
           </div>
           <div class="toolbar__actions">
+            <button
+              type="button"
+              class="theme-toggle"
+              (click)="theme.toggle()"
+              [attr.aria-label]="theme.theme() === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'"
+              [title]="theme.theme() === 'dark' ? 'فاتح' : 'داكن'"
+            >
+              @if (theme.theme() === 'dark') {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                  <circle cx="12" cy="12" r="4" />
+                  <path stroke-linecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+                </svg>
+                <span class="theme-toggle__label">فاتح</span>
+              } @else {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                </svg>
+                <span class="theme-toggle__label">داكن</span>
+              }
+            </button>
             @if (pwa.canNativeInstall()) {
               <button type="button" class="bell install" (click)="installApp()">تثبيت التطبيق</button>
             }
@@ -101,7 +146,8 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
       height: 100dvh;
       min-height: 100dvh;
       overflow: hidden;
-      background: #f8fafc;
+      background: var(--surface-muted);
+      color: var(--ink);
     }
 
     .sidebar {
@@ -276,10 +322,10 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
       justify-content: space-between;
       gap: 0.75rem;
       padding: 0 1rem;
-      border-bottom: 1px solid #e2e8f0;
-      background: rgba(255, 255, 255, 0.75);
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--surface) 88%, transparent);
       backdrop-filter: blur(12px);
-      color: #64748b;
+      color: var(--ink-muted);
       font-size: 0.85rem;
     }
 
@@ -306,9 +352,36 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
       height: 2.5rem;
       border: 0;
       border-radius: 0.6rem;
-      background: #f1f5f9;
-      color: #0f172a;
+      background: var(--row-hover);
+      color: var(--ink);
       cursor: pointer;
+    }
+
+    .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      height: 2.25rem;
+      padding: 0 0.75rem;
+      border: 1.5px solid var(--border);
+      border-radius: 0.6rem;
+      background: var(--surface);
+      color: var(--ink-muted);
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .theme-toggle svg {
+      width: 1.05rem;
+      height: 1.05rem;
+    }
+
+    .theme-toggle:hover {
+      background: var(--row-hover);
+      color: var(--ink);
     }
 
     .menu-btn svg {
@@ -326,10 +399,10 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
       gap: 0.4rem;
       height: 2.25rem;
       padding: 0 0.85rem;
-      border: 1.5px solid #e2e8f0;
+      border: 1.5px solid var(--border);
       border-radius: 0.6rem;
-      background: #fff;
-      color: #475569;
+      background: var(--surface);
+      color: var(--ink-muted);
       font: inherit;
       font-size: 0.8rem;
       font-weight: 600;
@@ -338,9 +411,9 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
     }
 
     .bell.install {
-      background: rgba(16, 184, 128, 0.12);
-      border-color: rgba(16, 184, 128, 0.35);
-      color: #059669;
+      background: var(--accent-soft);
+      border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+      color: var(--accent-strong);
     }
 
     .bell svg {
@@ -349,14 +422,14 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
     }
 
     .bell:hover:not(:disabled) {
-      background: #f8fafc;
-      color: #0f172a;
+      background: var(--row-hover);
+      color: var(--ink);
     }
 
     .bell.on {
-      border-color: rgba(16, 184, 128, 0.4);
-      background: rgba(16, 184, 128, 0.12);
-      color: #059669;
+      border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+      background: var(--accent-soft);
+      color: var(--accent-strong);
     }
 
     .bell:disabled {
@@ -433,7 +506,8 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
         height: calc(3.75rem + env(safe-area-inset-top, 0px));
       }
 
-      .bell__label {
+      .bell__label,
+      .theme-toggle__label {
         display: none;
       }
 
@@ -456,8 +530,10 @@ export class AdminShell implements OnInit {
   private readonly router = inject(Router);
   protected readonly auth = inject(AuthService);
   protected readonly chat = inject(ChatService);
+  protected readonly returns = inject(ReturnsAdminService);
   protected readonly push = inject(PushNotificationService);
   protected readonly pwa = inject(PwaInstallService);
+  protected readonly theme = inject(ThemeService);
 
   protected readonly navOpen = signal(false);
 
@@ -465,6 +541,7 @@ export class AdminShell implements OnInit {
     this.pwa.init();
     this.chat.connect();
     this.chat.loadConversations().subscribe();
+    this.returns.startWatching();
 
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
@@ -475,11 +552,12 @@ export class AdminShell implements OnInit {
     await this.pwa.promptInstall();
   }
 
-  protected readonly navItems = [
+  protected readonly allNavItems: NavItem[] = [
     {
       path: '/approvals',
       label: 'اعتماد المتاجر',
       icon: 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/shops',
@@ -487,24 +565,40 @@ export class AdminShell implements OnInit {
       icon: 'M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72l1.189-1.19A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72M6.75 18h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .414.336.75.75.75z',
     },
     {
+      path: '/users',
+      label: 'المستخدمون',
+      icon: 'M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.108-2.008-.26-2.642m0 2.645a14.814 14.814 0 01-.26 2.642m0-2.645a14.927 14.927 0 00-4.487-2.97m4.487 2.97c-.318.052-.642.09-.972.115a14.83 14.83 0 01-4.487-2.97M3.375 19.5h.008v.008H3.375V19.5zM3.75 12a8.25 8.25 0 1116.5 0 8.25 8.25 0 01-16.5 0z',
+      roles: ['ADMIN', 'MANAGER', 'STAFF'],
+    },
+    {
+      path: '/branches',
+      label: 'الفروع',
+      icon: 'M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z',
+      roles: ['ADMIN'],
+    },
+    {
       path: '/inventory',
       label: 'المخزون',
       icon: 'M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9',
+      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/brands',
       label: 'الماركات',
       icon: 'M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z M6 6h.008v.008H6V6z',
+      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/categories',
       label: 'الفئات',
       icon: 'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z',
+      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/data-import',
       label: 'استيراد بيانات',
       icon: 'M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5',
+      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/credit',
@@ -535,11 +629,13 @@ export class AdminShell implements OnInit {
       path: '/delivery-guys',
       label: 'مندوبو التوصيل',
       icon: 'M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0H21M3.375 14.25h12.75c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v6.75c0 .621.504 1.125 1.125 1.125z',
+      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/special-requests',
       label: 'الطلبات الخاصة',
-      icon: 'M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z',
+      icon: 'M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456z',
+      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/returns',
@@ -550,11 +646,26 @@ export class AdminShell implements OnInit {
       path: '/broadcast',
       label: 'بث إعلان',
       icon: 'M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z',
+      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/chat',
       label: 'المحادثات',
       icon: 'M8.25 8.25h7.5M8.25 12h4.5m6.75-1.5a8.25 8.25 0 01-11.4 7.62L3 19.5l1.38-4.1A8.25 8.25 0 1119.5 10.5z',
+      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
   ];
+
+  protected readonly visibleNavItems = computed(() => {
+    const role = this.auth.user()?.role;
+    if (!role) return [];
+    if (role === 'BRANCH_MANAGER') {
+      return this.allNavItems.filter((item) =>
+        BRANCH_MANAGER_PATHS.has(item.path),
+      );
+    }
+    return this.allNavItems.filter(
+      (item) => !item.roles || item.roles.includes(role as 'ADMIN' | 'MANAGER' | 'STAFF' | 'BRANCH_MANAGER'),
+    );
+  });
 }

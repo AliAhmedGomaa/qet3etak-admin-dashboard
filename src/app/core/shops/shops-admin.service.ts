@@ -15,6 +15,7 @@ export type ShopInput = {
   commercialRegPhotoUrl?: string;
   status?: UserStatus;
   rejectionReason?: string;
+  branchId?: string | null;
 };
 
 @Injectable({ providedIn: 'root' })

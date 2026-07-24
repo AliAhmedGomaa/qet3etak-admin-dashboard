@@ -1,0 +1,197 @@
+<section class="users" dir="rtl">
+  <header class="users__header">
+    <div>
+      <h1>المستخدمون والأدوار</h1>
+      <p>إنشاء وإدارة مستخدمي لوحة الإدارة وتعيين أدوارهم.</p>
+    </div>
+    <div class="users__actions">
+      <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
+      <button type="button" class="btn btn-primary" (click)="openCreate()">إضافة مستخدم</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  @if (roles().length) {
+    <div class="roles-strip" aria-label="تعريفات الأدوار">
+      @for (role of roles(); track role.role) {
+        <article class="role-card">
+          <strong>{{ role.labelAr }}</strong>
+          <span class="role-card__code">{{ role.role }}</span>
+          <p>{{ role.descriptionAr }}</p>
+        </article>
+      }
+    </div>
+  }
+
+  <div class="toolbar">
+    <label class="search">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M8.5 14.5a6 6 0 100-12 6 6 0 000 12zM17 17l-3.2-3.2"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <input
+        type="search"
+        [value]="searchDraft"
+        (input)="onSearchInput($any($event.target).value)"
+        placeholder="ابحث بالاسم أو رقم الجوال…"
+        aria-label="بحث في المستخدمين"
+      />
+      @if (searchDraft) {
+        <button type="button" class="search__clear" (click)="clearSearch()" aria-label="مسح البحث">
+          مسح
+        </button>
+      }
+    </label>
+
+    <label class="filter">
+      <span>الدور</span>
+      <select
+        [value]="roleFilter()"
+        (change)="onRoleFilter($any($event.target).value)"
+        aria-label="تصفية حسب الدور"
+      >
+        <option value="">الكل</option>
+        @for (role of roles(); track role.role) {
+          <option [value]="role.role">{{ role.labelAr }}</option>
+        }
+      </select>
+    </label>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>الجوال</th>
+          <th>الدور</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="5" class="muted">جارٍ التحميل…</td></tr>
+        } @else if (users().length === 0) {
+          <tr>
+            <td colspan="5" class="muted">
+              {{ searchQuery() || roleFilter() ? 'لا توجد نتائج لهذا البحث.' : 'لا يوجد مستخدمون بعد.' }}
+            </td>
+          </tr>
+        } @else {
+          @for (user of users(); track user.id) {
+            <tr>
+              <td><strong>{{ user.fullName }}</strong></td>
+              <td dir="ltr">{{ user.phone }}</td>
+              <td>
+                <span class="role-pill" [attr.data-role]="user.role">
+                  {{ roleLabel(user.role) }}
+                </span>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="chip"
+                  [class.chip--off]="!user.isActive"
+                  (click)="toggleActive(user)"
+                >
+                  {{ user.isActive ? 'نشط' : 'موقوف' }}
+                </button>
+              </td>
+              <td class="row-actions">
+                <button type="button" class="btn btn-ghost" (click)="openEdit(user)">تعديل</button>
+                <button type="button" class="btn btn-danger" (click)="remove(user)">حذف</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="20"
+    itemLabel="مستخدم"
+    ariaLabel="صفحات المستخدمين"
+    (pageChange)="goPage($event)"
+  />
+</section>
+
+@if (editorOpen()) {
+  <div class="overlay" (click)="closeEditor()">
+    <div class="drawer" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header>
+        <h2>{{ editingId() ? 'تعديل مستخدم' : 'مستخدم جديد' }}</h2>
+        <button type="button" class="btn btn-ghost" (click)="closeEditor()">إغلاق</button>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <label>
+          الاسم الكامل
+          <input formControlName="fullName" placeholder="مثال: سارة أحمد" />
+        </label>
+
+        <label>
+          رقم الجوال
+          <input formControlName="phone" placeholder="05xxxxxxxx" dir="ltr" />
+        </label>
+
+        <label>
+          كلمة المرور
+          {{ editingId() ? '(اتركها فارغة للإبقاء على الحالية)' : '' }}
+          <input
+            type="password"
+            formControlName="password"
+            autocomplete="new-password"
+            [placeholder]="editingId() ? '••••••••' : '٦ أحرف على الأقل'"
+          />
+        </label>
+
+        <label>
+          الدور
+          <select formControlName="role" [disabled]="editingBranchManager()">
+            @for (role of formRoleOptions(); track role.role) {
+              <option [value]="role.role">{{ role.labelAr }} ({{ role.role }})</option>
+            }
+          </select>
+          @if (editingBranchManager()) {
+            <span class="hint">يُدار تعيين مدير الفرع من صفحة الفروع.</span>
+          }
+        </label>
+
+        <label class="active-toggle">
+          <input type="checkbox" formControlName="isActive" />
+          <span>حساب نشط (يمكنه تسجيل الدخول)</span>
+        </label>
+
+        <footer>
+          <button type="button" class="btn btn-ghost" (click)="closeEditor()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'جارٍ الحفظ…' : 'حفظ' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="!!deleteTarget()"
+  title="تأكيد الحذف"
+  [message]="deleteTarget() ? 'هل تريد حذف المستخدم «' + deleteTarget()!.fullName + '»؟ لا يمكن التراجع عن هذا الإجراء.' : ''"
+  confirmLabel="حذف المستخدم"
+  [busy]="deleting()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()"
+/>

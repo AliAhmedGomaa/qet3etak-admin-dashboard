@@ -70,6 +70,7 @@ export class ReturnsAdmin implements OnInit {
           this.totalPages.set(res.totalPages);
           this.total.set(res.total);
           this.loading.set(false);
+          this.api.refreshPendingCount();
         },
         error: () => {
           this.loading.set(false);

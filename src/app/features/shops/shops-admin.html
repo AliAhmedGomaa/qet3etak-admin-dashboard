@@ -49,6 +49,7 @@
           <th>المالك</th>
           <th>الجوال</th>
           <th>المدينة</th>
+          <th>الفرع</th>
           <th>الحالة</th>
           <th>التسجيل</th>
           <th></th>
@@ -56,10 +57,10 @@
       </thead>
       <tbody>
         @if (loading()) {
-          <tr><td colspan="7" class="muted">جارٍ التحميل…</td></tr>
+          <tr><td colspan="8" class="muted">جارٍ التحميل…</td></tr>
         } @else if (shops().length === 0) {
           <tr>
-            <td colspan="7" class="muted">
+            <td colspan="8" class="muted">
               {{
                 searchQuery() || statusFilter()
                   ? 'لا توجد نتائج.'
@@ -77,11 +78,13 @@
               <td>{{ shop.fullName }}</td>
               <td dir="ltr">{{ shop.phone }}</td>
               <td>{{ shop.city }}</td>
+              <td>{{ branchLabel(shop.branchId) }}</td>
               <td>
                 <span
                   class="chip"
                   [class.chip--pending]="shop.status === 'PENDING_VERIFICATION'"
                   [class.chip--off]="shop.status === 'REJECTED'"
+                  [class.chip--suspended]="shop.status === 'SUSPENDED'"
                 >
                   {{ statusLabel(shop.status) }}
                 </span>
@@ -115,9 +118,18 @@
                   <button
                     type="button"
                     class="btn btn-ghost"
-                    (click)="setStatus(shop, 'REJECTED')"
+                    (click)="setStatus(shop, 'SUSPENDED')"
                   >
                     إيقاف
+                  </button>
+                }
+                @if (shop.status === 'SUSPENDED') {
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    (click)="setStatus(shop, 'APPROVED')"
+                  >
+                    تفعيل
                   </button>
                 }
                 @if (shop.status === 'REJECTED') {
@@ -194,6 +206,7 @@
               <select formControlName="status">
                 <option value="APPROVED">معتمد</option>
                 <option value="PENDING_VERIFICATION">قيد المراجعة</option>
+                <option value="SUSPENDED">موقوف</option>
                 <option value="REJECTED">مرفوض</option>
               </select>
             </label>
@@ -202,6 +215,17 @@
             <label>
               سبب الرفض
               <textarea rows="2" formControlName="rejectionReason"></textarea>
+            </label>
+          }
+          @if (isSuperAdmin()) {
+            <label>
+              الفرع
+              <select formControlName="branchId">
+                <option value="">المركز / غير معيّن</option>
+                @for (b of branchOptions(); track b.id) {
+                  <option [value]="b.id">{{ b.name }} ({{ b.code }})</option>
+                }
+              </select>
             </label>
           }
           <label>
@@ -232,13 +256,29 @@
   }
 
   <app-confirm-dialog
+    [open]="!!suspendTarget()"
+    title="إيقاف المتجر؟"
+    [message]="
+      suspendTarget()
+        ? 'سيتم إيقاف «' +
+          suspendTarget()!.shopName +
+          '» ولن يتمكن المالك من تسجيل الدخول أو استخدام التطبيق حتى إعادة التفعيل.'
+        : ''
+    "
+    confirmLabel="إيقاف"
+    [busy]="statusBusy()"
+    (confirmed)="confirmSuspend()"
+    (cancelled)="cancelSuspend()"
+  />
+
+  <app-confirm-dialog
     [open]="!!deleteTarget()"
     title="حذف المتجر؟"
     [message]="
       deleteTarget()
         ? 'سيتم حذف «' +
           deleteTarget()!.shopName +
-          '» نهائياً إن لم يكن له طلبات. المتاجر ذات الطلبات لا تُحذف — استخدم الرفض بدلًا من ذلك.'
+          '» نهائياً إن لم يكن له طلبات. المتاجر ذات الطلبات لا تُحذف — استخدم الإيقاف بدلًا من ذلك.'
         : ''
     "
     confirmLabel="حذف"

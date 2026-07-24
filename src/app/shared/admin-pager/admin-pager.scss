@@ -7,10 +7,11 @@
   flex-shrink: 0;
   margin-top: 0.15rem;
   padding: 0.85rem 1rem;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e2e8f0);
   border-radius: 0.85rem;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--shadow, 0 8px 20px rgba(15, 23, 42, 0.04));
+  color: var(--ink, #0f172a);
 }
 
 .pager__summary {
@@ -23,13 +24,13 @@
 .pager__summary strong {
   font-size: 0.875rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink, #0f172a);
 }
 
 .pager__summary span {
   font-size: 0.75rem;
   font-weight: 500;
-  color: #64748b;
+  color: var(--ink-muted, #64748b);
 }
 
 .pager__controls {
@@ -45,10 +46,10 @@
   gap: 0.35rem;
   min-height: 2.35rem;
   padding: 0 0.8rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border, #e2e8f0);
   border-radius: 0.6rem;
-  background: #fff;
-  color: #334155;
+  background: var(--surface, #fff);
+  color: var(--ink, #334155);
   font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
@@ -66,9 +67,9 @@
 }
 
 .pager__nav:hover:not(:disabled) {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #0f172a;
+  background: var(--row-hover, #f8fafc);
+  border-color: var(--border-strong, #cbd5e1);
+  color: var(--ink, #0f172a);
 }
 
 .pager__nav:disabled {
@@ -89,7 +90,7 @@
   border: 1px solid transparent;
   border-radius: 0.6rem;
   background: transparent;
-  color: #475569;
+  color: var(--ink-muted, #475569);
   font: inherit;
   font-size: 0.82rem;
   font-weight: 700;
@@ -101,25 +102,25 @@
 }
 
 .pager__page:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: var(--row-hover, #f1f5f9);
+  color: var(--ink, #0f172a);
 }
 
 .pager__page.is-active {
-  background: #10b880;
-  color: #fff;
-  box-shadow: 0 4px 10px rgba(16, 184, 128, 0.28);
+  background: var(--accent, #10b880);
+  color: #042f1e;
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--accent, #10b880) 28%, transparent);
 }
 
 .pager__page.is-active:hover {
-  background: #0d9a6a;
-  color: #fff;
+  background: var(--accent-strong, #0d9a6a);
+  color: #042f1e;
 }
 
 .pager__gap {
   min-width: 1.5rem;
   text-align: center;
-  color: #94a3b8;
+  color: var(--ink-soft, #94a3b8);
   font-weight: 700;
   user-select: none;
 }

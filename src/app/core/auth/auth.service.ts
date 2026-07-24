@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthResponse, ShopUser } from './auth.models';
+import { AuthResponse, ShopUser, isAdminPanelRole } from './auth.models';
 
 const TOKEN_KEY = 'qet3etak.admin.token';
 const USER_KEY = 'qet3etak.admin.user';
@@ -19,13 +19,18 @@ export class AuthService {
   readonly user = this.userSignal.asReadonly();
   readonly token = this.tokenSignal.asReadonly();
   readonly isAuthenticated = computed(() => !!this.tokenSignal());
+  readonly isSuperAdmin = computed(() => this.user()?.role === 'ADMIN');
+  readonly isBranchManager = computed(
+    () => this.user()?.role === 'BRANCH_MANAGER',
+  );
+  readonly branchId = computed(() => this.user()?.branchId ?? null);
 
   login(phone: string, password: string): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${environment.apiUrl}/auth/login`, { phone, password })
       .pipe(
         map((res) => {
-          if (res.user.role !== 'ADMIN') {
+          if (!isAdminPanelRole(res.user.role)) {
             throw { error: { message: 'Admin access only' } };
           }
           return res;

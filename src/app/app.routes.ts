@@ -1,8 +1,8 @@
 import { Routes } from '@angular/router';
-import { adminGuard } from './core/auth/admin.guard';
+import { adminGuard, superAdminGuard } from './core/auth/admin.guard';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'approvals' },
+  { path: '', pathMatch: 'full', redirectTo: 'reports' },
   {
     path: 'login',
     loadComponent: () =>
@@ -25,6 +25,20 @@ export const routes: Routes = [
         path: 'shops',
         loadComponent: () =>
           import('./features/shops/shops-admin').then((m) => m.ShopsAdmin),
+      },
+      {
+        path: 'users',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./features/users/users-admin').then((m) => m.UsersAdmin),
+      },
+      {
+        path: 'branches',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./features/branches/branches-admin').then(
+            (m) => m.BranchesAdmin,
+          ),
       },
       {
         path: 'inventory',

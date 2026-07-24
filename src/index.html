@@ -10,6 +10,24 @@
     />
     <meta name="theme-color" content="#0F172A" />
     <meta name="description" content="لوحة إدارة منصة قطع غيار الموبايل" />
+    <script>
+      (function () {
+        try {
+          var k = 'qet3etak.admin.theme';
+          var t = localStorage.getItem(k);
+          if (t !== 'dark' && t !== 'light') {
+            t =
+              window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light';
+          }
+          document.documentElement.setAttribute('data-theme', t);
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute('content', t === 'dark' ? '#0f172a' : '#f8fafc');
+        } catch (e) {}
+      })();
+    </script>
 
     <!-- Android / Chromium installability -->
     <meta name="mobile-web-app-capable" content="yes" />
