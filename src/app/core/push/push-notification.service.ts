@@ -20,9 +20,12 @@ export class PushNotificationService {
   async enable(): Promise<boolean> {
     this.busy.set(true);
     this.lastError.set(null);
+    this.supported.set(this.isPushSupported());
     try {
       if (!this.swPush || !this.swPush.isEnabled) {
-        this.lastError.set('خدمة الإشعارات غير مفعّلة (استخدم نسخة الإنتاج / HTTPS)');
+        this.lastError.set(
+          'خدمة الإشعارات غير مفعّلة (استخدم نسخة الإنتاج / HTTPS)',
+        );
         return false;
       }
 
@@ -32,20 +35,21 @@ export class PushNotificationService {
         return false;
       }
 
-      const { publicKey } = await firstValueFrom(
-        this.http.get<{ publicKey: string }>(
-          `${environment.apiUrl}/push/vapid-public-key`,
-        ),
-      );
-      if (!publicKey) {
+      const key = await this.resolveVapidPublicKey();
+      if (!key) {
         this.lastError.set('مفتاح الإشعارات غير متوفر على الخادم');
         return false;
       }
 
       const sub = await this.swPush.requestSubscription({
-        serverPublicKey: publicKey,
+        serverPublicKey: key,
       });
       const json = sub.toJSON();
+      if (!json.endpoint || !json.keys?.['p256dh'] || !json.keys?.['auth']) {
+        this.lastError.set('تعذر إنشاء اشتراك الإشعارات في المتصفح');
+        return false;
+      }
+
       await firstValueFrom(
         this.http.post(`${environment.apiUrl}/admin/push/subscribe`, {
           endpoint: json.endpoint,
@@ -56,9 +60,7 @@ export class PushNotificationService {
       localStorage.setItem(ENABLED_KEY, '1');
       return true;
     } catch (err) {
-      this.lastError.set(
-        err instanceof Error ? err.message : 'تعذر تفعيل الإشعارات',
-      );
+      this.lastError.set(this.formatError(err));
       return false;
     } finally {
       this.busy.set(false);
@@ -95,11 +97,43 @@ export class PushNotificationService {
     else await this.enable();
   }
 
+  private async resolveVapidPublicKey(): Promise<string> {
+    try {
+      const res = await firstValueFrom(
+        this.http.get<{ publicKey?: string; enabled?: boolean }>(
+          `${environment.apiUrl}/push/vapid-public-key`,
+        ),
+      );
+      if (res.enabled === false) {
+        throw new Error('الإشعارات غير مفعّلة على الخادم (VAPID)');
+      }
+      if (res.publicKey?.trim()) return res.publicKey.trim();
+    } catch (err) {
+      if (environment.vapidPublicKey?.trim()) {
+        return environment.vapidPublicKey.trim();
+      }
+      throw err;
+    }
+    return environment.vapidPublicKey?.trim() || '';
+  }
+
+  private formatError(err: unknown): string {
+    if (err && typeof err === 'object' && 'error' in err) {
+      const body = (err as { error?: { message?: string | string[] } }).error;
+      const msg = body?.message;
+      if (Array.isArray(msg)) return msg.join(' · ');
+      if (typeof msg === 'string' && msg.trim()) return msg;
+    }
+    if (err instanceof Error && err.message.trim()) return err.message;
+    return 'تعذر تفعيل الإشعارات';
+  }
+
   private isPushSupported(): boolean {
     return (
       typeof window !== 'undefined' &&
       'Notification' in window &&
       'serviceWorker' in navigator &&
+      'PushManager' in window &&
       this.swPush != null
     );
   }
