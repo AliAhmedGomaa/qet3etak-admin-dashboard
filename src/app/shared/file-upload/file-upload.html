@@ -2,7 +2,7 @@
   class="fu"
   [class.fu--drag]="dragging()"
   [class.fu--invalid]="invalid()"
-  [class.fu--disabled]="disabled()"
+  [class.fu--disabled]="isDisabled()"
   [class.fu--filled]="!!preview()"
   role="button"
   tabindex="0"
@@ -19,7 +19,7 @@
     class="fu__input"
     [accept]="accept()"
     [attr.capture]="capture()"
-    [disabled]="disabled()"
+    [disabled]="isDisabled()"
     (change)="onInput($event)"
   />
 
@@ -28,7 +28,7 @@
       <img class="fu__thumb" [src]="src" alt="معاينة" />
       <div class="fu__meta">
         <span class="fu__name">{{ fileName() ?? 'الصورة الحالية' }}</span>
-        <span class="fu__change">اضغط للتغيير</span>
+        <span class="fu__change">{{ compressing() ? 'جاري ضغط الصورة…' : 'اضغط للتغيير' }}</span>
       </div>
       <button
         type="button"
@@ -49,7 +49,7 @@
           <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </span>
-      <p class="fu__label">{{ label() }}</p>
+      <p class="fu__label">{{ compressing() ? 'جاري ضغط الصورة…' : label() }}</p>
       <p class="fu__hint">{{ hint() }}</p>
     </div>
   }
