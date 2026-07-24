@@ -154,10 +154,15 @@ const BRANCH_MANAGER_PATHS = new Set([
       width: 15.5rem;
       background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
       color: #f8fafc;
-      padding: 1.25rem 0.75rem;
+      /* Safe-area: notch / home indicator / landscape edges (RTL drawer OK). */
+      padding-top: calc(1.25rem + env(safe-area-inset-top, 0px));
+      padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+      padding-left: calc(0.75rem + env(safe-area-inset-left, 0px));
+      padding-right: calc(0.75rem + env(safe-area-inset-right, 0px));
       display: flex;
       flex-direction: column;
       border-inline-start: 1px solid rgba(255, 255, 255, 0.06);
+      box-sizing: border-box;
     }
 
     .brand {
@@ -321,12 +326,14 @@ const BRANCH_MANAGER_PATHS = new Set([
       align-items: center;
       justify-content: space-between;
       gap: 0.75rem;
-      padding: 0 1rem;
+      padding: 0 calc(1rem + env(safe-area-inset-right, 0px)) 0
+        calc(1rem + env(safe-area-inset-left, 0px));
       border-bottom: 1px solid var(--border);
       background: color-mix(in srgb, var(--surface) 88%, transparent);
       backdrop-filter: blur(12px);
       color: var(--ink-muted);
       font-size: 0.85rem;
+      box-sizing: border-box;
     }
 
     .toolbar__start,
@@ -439,11 +446,15 @@ const BRANCH_MANAGER_PATHS = new Set([
 
     .content {
       padding: 1.5rem;
+      padding-left: calc(1.5rem + env(safe-area-inset-left, 0px));
+      padding-right: calc(1.5rem + env(safe-area-inset-right, 0px));
+      padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
       flex: 1;
       min-height: 0;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      box-sizing: border-box;
     }
 
     @media (max-width: 900px) {
@@ -503,6 +514,8 @@ const BRANCH_MANAGER_PATHS = new Set([
 
       .toolbar {
         padding-top: env(safe-area-inset-top, 0px);
+        padding-left: calc(1rem + env(safe-area-inset-left, 0px));
+        padding-right: calc(1rem + env(safe-area-inset-right, 0px));
         height: calc(3.75rem + env(safe-area-inset-top, 0px));
       }
 
@@ -513,6 +526,9 @@ const BRANCH_MANAGER_PATHS = new Set([
 
       .content {
         padding: 1rem;
+        padding-left: calc(1rem + env(safe-area-inset-left, 0px));
+        padding-right: calc(1rem + env(safe-area-inset-right, 0px));
+        padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
         flex: 1 1 auto;
         min-height: 0;
       }
@@ -520,7 +536,14 @@ const BRANCH_MANAGER_PATHS = new Set([
 
     @media (min-width: 901px) {
       .toolbar {
-        padding: 0 1.5rem;
+        padding: 0 calc(1.5rem + env(safe-area-inset-right, 0px)) 0
+          calc(1.5rem + env(safe-area-inset-left, 0px));
+      }
+
+      .content {
+        padding-left: calc(1.5rem + env(safe-area-inset-left, 0px));
+        padding-right: calc(1.5rem + env(safe-area-inset-right, 0px));
+        padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
       }
     }
   `,
