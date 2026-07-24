@@ -13,10 +13,11 @@ import {
   SpecialRequestStatus,
 } from '../../core/special-requests/admin-special-requests.api';
 import { specialStatusAr } from '../../core/i18n/ar-labels';
+import { AdminPager } from '../../shared/admin-pager/admin-pager';
 
 @Component({
   selector: 'app-special-requests-center',
-  imports: [CurrencyPipe, FormsModule],
+  imports: [CurrencyPipe, FormsModule, AdminPager],
   templateUrl: './special-requests-center.html',
   styleUrl: './special-requests-center.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,6 +30,12 @@ export class SpecialRequestsCenter implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly filter = signal<SpecialRequestStatus | ''>('PENDING');
   protected readonly selected = signal<AdminSpecialRequest | null>(null);
+  protected readonly page = signal(1);
+  protected readonly totalPages = signal(1);
+  protected readonly total = signal(0);
+  protected readonly searchQuery = signal('');
+  protected searchDraft = '';
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected quotePrice = 0;
   protected estimatedArrival = '';
@@ -43,22 +50,60 @@ export class SpecialRequestsCenter implements OnInit {
 
   protected setFilter(status: SpecialRequestStatus | ''): void {
     this.filter.set(status);
+    this.page.set(1);
     this.load();
   }
 
   protected load(): void {
     this.loading.set(true);
     const status = this.filter() || undefined;
-    this.api.list(status as SpecialRequestStatus | undefined).subscribe({
-      next: (rows) => {
-        this.rows.set(rows);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.error.set('تعذر تحميل الطلبات الخاصة');
-      },
-    });
+    this.api
+      .list(status as SpecialRequestStatus | undefined, {
+        page: this.page(),
+        limit: 20,
+        q: this.searchQuery() || undefined,
+      })
+      .subscribe({
+        next: (res) => {
+          this.rows.set(res.items);
+          this.page.set(res.page);
+          this.totalPages.set(res.totalPages);
+          this.total.set(res.total);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.loading.set(false);
+          this.error.set('تعذر تحميل الطلبات الخاصة');
+        },
+      });
+  }
+
+  protected onSearchInput(value: string): void {
+    this.searchDraft = value;
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      const next = value.trim();
+      if (next === this.searchQuery()) return;
+      this.searchQuery.set(next);
+      this.page.set(1);
+      this.load();
+    }, 320);
+  }
+
+  protected clearSearch(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchDraft = '';
+    if (!this.searchQuery()) return;
+    this.searchQuery.set('');
+    this.page.set(1);
+    this.load();
+  }
+
+  protected goPage(next: number): void {
+    const page = Math.min(this.totalPages(), Math.max(1, next));
+    if (page === this.page()) return;
+    this.page.set(page);
+    this.load();
   }
 
   protected open(row: AdminSpecialRequest): void {

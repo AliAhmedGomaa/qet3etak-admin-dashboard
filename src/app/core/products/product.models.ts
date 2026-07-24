@@ -11,9 +11,11 @@ export interface Product {
   brand: string;
   model: string;
   category: string;
+  part?: string;
   qualityGrade: QualityGrade;
   stockQuantity: number;
   basePrice: number;
+  costPrice?: number;
   tieredPricing: TieredPrice[];
   imageUrl: string;
   sku?: string;

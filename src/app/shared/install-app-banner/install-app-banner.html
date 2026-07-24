@@ -1,0 +1,68 @@
+@if (pwa.shouldShowBanner()) {
+  <aside class="install-banner" role="dialog" aria-labelledby="install-banner-title" dir="rtl">
+    <button
+      type="button"
+      class="install-banner__dismiss"
+      aria-label="إغلاق"
+      (click)="onDismiss()"
+    >
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
+
+    <div class="install-banner__icon" aria-hidden="true">
+      <img src="/icons/icon-192x192.png" width="48" height="48" alt="" />
+    </div>
+
+    <div class="install-banner__body">
+      <h2 id="install-banner-title" class="install-banner__title">ثبّت لوحة الإدارة كتطبيق</h2>
+      <p class="install-banner__subtitle">
+        افتح الطلبات والمحادثات بسرعة من الشاشة الرئيسية — بدون شريط المتصفح.
+      </p>
+
+      @if (pwa.platform() === 'android') {
+        @if (pwa.canNativeInstall()) {
+          <button type="button" class="install-banner__cta" (click)="onInstallClick()">
+            تثبيت التطبيق
+          </button>
+        } @else {
+          <ol class="install-banner__steps">
+            <li>
+              افتح قائمة المتصفح
+              <strong>⋮</strong>
+            </li>
+            <li>
+              اختر
+              <strong>تثبيت التطبيق</strong>
+              أو
+              <strong>إضافة إلى الشاشة الرئيسية</strong>
+            </li>
+            <li>لا تستخدم وضع التصفح المتخفي</li>
+          </ol>
+        }
+      }
+
+      @if (pwa.platform() === 'ios-safari') {
+        <ol class="install-banner__steps">
+          <li>
+            اضغط أيقونة
+            <span class="install-banner__share" aria-label="مشاركة">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0 4 4M12 4 8 8" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+              </svg>
+              مشاركة
+            </span>
+          </li>
+          <li>
+            ثم اختر
+            <strong>إضافة إلى الشاشة الرئيسية</strong>
+            / <strong>Add to Home Screen</strong>
+          </li>
+          <li>استخدم Safari (ليس Chrome على iOS)</li>
+        </ol>
+      }
+    </div>
+  </aside>
+}

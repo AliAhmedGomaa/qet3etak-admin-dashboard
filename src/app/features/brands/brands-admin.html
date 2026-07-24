@@ -1,0 +1,166 @@
+<section class="brands" dir="rtl">
+  <header class="brands__header">
+    <div>
+      <h1>الماركات</h1>
+      <p>إدارة أسماء الماركات وأيقوناتها الظاهرة في تطبيق المحلات.</p>
+    </div>
+    <div class="brands__actions">
+      <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
+      <button type="button" class="btn btn-primary" (click)="openCreate()">إضافة ماركة</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  <div class="toolbar">
+    <label class="search">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M8.5 14.5a6 6 0 100-12 6 6 0 000 12zM17 17l-3.2-3.2"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <input
+        type="search"
+        [value]="searchDraft"
+        (input)="onSearchInput($any($event.target).value)"
+        placeholder="ابحث باسم الماركة…"
+        aria-label="بحث في الماركات"
+      />
+      @if (searchDraft) {
+        <button type="button" class="search__clear" (click)="clearSearch()" aria-label="مسح البحث">
+          مسح
+        </button>
+      }
+    </label>
+    @if (searchQuery()) {
+      <p class="search__hint">نتائج البحث عن «{{ searchQuery() }}»</p>
+    }
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>الأيقونة</th>
+          <th>الاسم</th>
+          <th>الترتيب</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="5" class="muted">جارٍ التحميل…</td></tr>
+        } @else if (brands().length === 0) {
+          <tr><td colspan="5" class="muted">{{ searchQuery() ? 'لا توجد نتائج لهذا البحث.' : 'لا توجد ماركات بعد.' }}</td></tr>
+        } @else {
+          @for (brand of brands(); track brand.id) {
+            <tr>
+              <td>
+                @if (iconSrc(brand)) {
+                  <img class="icon" [src]="iconSrc(brand)" [alt]="brand.name" width="40" height="40" />
+                } @else {
+                  <span class="icon-fallback">{{ initial(brand.name) }}</span>
+                }
+              </td>
+              <td><strong>{{ brand.name }}</strong></td>
+              <td>{{ brand.sortOrder }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="chip"
+                  [class.chip--off]="!brand.isActive"
+                  (click)="toggleActive(brand)"
+                >
+                  {{ brand.isActive ? 'نشط' : 'متوقف' }}
+                </button>
+              </td>
+              <td class="row-actions">
+                <button type="button" class="btn btn-ghost" (click)="openEdit(brand)">تعديل</button>
+                <button type="button" class="btn btn-danger" (click)="remove(brand)">حذف</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="20"
+    itemLabel="ماركة"
+    ariaLabel="صفحات الماركات"
+    (pageChange)="goPage($event)"
+  />
+</section>
+
+@if (editorOpen()) {
+  <div class="overlay" (click)="closeEditor()">
+    <div class="drawer" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header>
+        <h2>{{ editingId() ? 'تعديل ماركة' : 'ماركة جديدة' }}</h2>
+        <button type="button" class="btn btn-ghost" (click)="closeEditor()">إغلاق</button>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <label>
+          الاسم
+          <input formControlName="name" placeholder="Apple, Samsung…" />
+        </label>
+
+        <div class="upload-field">
+          <span class="upload-field__label">
+            صورة الأيقونة {{ editingId() ? '(اترك فارغاً للإبقاء على الحالية)' : '' }}
+          </span>
+          <app-file-upload
+            accept="image/*"
+            [previewUrl]="iconPreview()"
+            [invalid]="!!iconError()"
+            (fileSelected)="onIconSelected($event)"
+          />
+        </div>
+
+        @if (iconError()) {
+          <p class="err">{{ iconError() }}</p>
+        }
+
+        <div class="grid-2">
+          <label>
+            الترتيب
+            <input type="number" formControlName="sortOrder" />
+          </label>
+          <label class="active-toggle">
+            <input type="checkbox" formControlName="isActive" />
+            <span>ماركة نشطة</span>
+          </label>
+        </div>
+
+        <footer>
+          <button type="button" class="btn btn-ghost" (click)="closeEditor()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'جارٍ الحفظ…' : 'حفظ' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="!!deleteTarget()"
+  title="تأكيد الحذف"
+  [message]="deleteTarget() ? 'هل تريد حذف ماركة «' + deleteTarget()!.name + '»؟ لا يمكن التراجع عن هذا الإجراء.' : ''"
+  confirmLabel="حذف الماركة"
+  [busy]="deleting()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()"
+/>

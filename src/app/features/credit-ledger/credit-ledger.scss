@@ -1,12 +1,17 @@
 .ledger {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 header {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 header h1 {
@@ -23,7 +28,9 @@ header p {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
 }
 
 .table-wrap,
@@ -36,6 +43,12 @@ header p {
 
 .table-wrap {
   overflow: auto;
+  min-height: 0;
+}
+
+.panel {
+  overflow: auto;
+  min-height: 0;
 }
 
 table {
@@ -52,6 +65,9 @@ td {
 }
 
 th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -81,6 +97,9 @@ td small {
   padding: 1.1rem;
   display: grid;
   gap: 0.85rem;
+  align-content: start;
+  overflow: auto;
+  min-height: 0;
 }
 
 .panel h2 {

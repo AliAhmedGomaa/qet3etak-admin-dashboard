@@ -1,0 +1,153 @@
+.ss {
+  position: relative;
+  width: 100%;
+}
+
+.ss__trigger {
+  width: 100%;
+  min-height: 2.6rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.7rem;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: start;
+  transition: border-color 0.15s;
+}
+
+.ss__trigger:hover:not(:disabled) {
+  border-color: #cbd5e1;
+}
+
+.ss.is-open .ss__trigger {
+  border-color: #10b880;
+  box-shadow: 0 0 0 3px rgba(16, 184, 128, 0.12);
+}
+
+.ss__trigger:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+  color: #94a3b8;
+}
+
+.ss__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ss__value.is-placeholder {
+  color: #94a3b8;
+}
+
+.ss__caret {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+  color: #94a3b8;
+  transition: transform 0.15s;
+}
+
+.ss.is-open .ss__caret {
+  transform: rotate(180deg);
+}
+
+.ss__panel {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 0.3rem);
+  inset-inline: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.7rem;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+  overflow: hidden;
+  animation: ss-pop 0.12s ease-out;
+}
+
+@keyframes ss-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ss__search {
+  padding: 0.5rem;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.ss__search input {
+  width: 100%;
+  min-height: 2.3rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.55rem;
+  padding: 0.35rem 0.6rem;
+  font: inherit;
+}
+
+.ss__search input:focus {
+  outline: none;
+  border-color: #10b880;
+}
+
+.ss__list {
+  list-style: none;
+  margin: 0;
+  padding: 0.3rem;
+  max-height: 15rem;
+  overflow: auto;
+}
+
+.ss__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.87rem;
+}
+
+.ss__option.is-active {
+  background: #f0fdf8;
+}
+
+.ss__option.is-selected {
+  color: #0d9a6a;
+  font-weight: 700;
+}
+
+.ss__option.is-selected::after {
+  content: '✓';
+  color: #10b880;
+  font-weight: 700;
+}
+
+.ss__option.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ss__hint {
+  color: #94a3b8;
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+.ss__empty {
+  padding: 0.9rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.82rem;
+}

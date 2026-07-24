@@ -17,6 +17,7 @@ export class AuthService {
   private readonly userSignal = signal<ShopUser | null>(this.readUser());
 
   readonly user = this.userSignal.asReadonly();
+  readonly token = this.tokenSignal.asReadonly();
   readonly isAuthenticated = computed(() => !!this.tokenSignal());
 
   login(phone: string, password: string): Observable<AuthResponse> {
@@ -34,11 +35,24 @@ export class AuthService {
   }
 
   logout(): void {
+    this.clearSession();
+    void this.router.navigateByUrl('/login');
+  }
+
+  /** Triggered when the server rejects the stored token (expired / removed). */
+  sessionExpired(): void {
+    if (!this.tokenSignal()) return;
+    this.clearSession();
+    void this.router.navigate(['/login'], {
+      queryParams: { expired: '1' },
+    });
+  }
+
+  private clearSession(): void {
     this.tokenSignal.set(null);
     this.userSignal.set(null);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
-    void this.router.navigateByUrl('/login');
   }
 
   authHeader(): string | null {

@@ -11,6 +11,35 @@
     <p class="err">{{ error() }}</p>
   }
 
+  <div class="toolbar">
+    <label class="search">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M8.5 14.5a6 6 0 100-12 6 6 0 000 12zM17 17l-3.2-3.2"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <input
+        type="search"
+        [value]="searchDraft"
+        (input)="onSearchInput($any($event.target).value)"
+        placeholder="ابحث برقم الطلب أو اسم المحل…"
+        aria-label="بحث في الطلبات"
+      />
+      @if (searchDraft) {
+        <button type="button" class="search__clear" (click)="clearSearch()" aria-label="مسح البحث">
+          مسح
+        </button>
+      }
+    </label>
+    @if (searchQuery()) {
+      <p class="search__hint">نتائج البحث عن «{{ searchQuery() }}»</p>
+    }
+  </div>
+
   @if (loading() && orders().length === 0) {
     <p class="muted">جارٍ تحميل الطلبات…</p>
   } @else {
@@ -60,4 +89,14 @@
       }
     </div>
   }
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="100"
+    itemLabel="طلب"
+    ariaLabel="صفحات الطلبات"
+    (pageChange)="goPage($event)"
+  />
 </section>

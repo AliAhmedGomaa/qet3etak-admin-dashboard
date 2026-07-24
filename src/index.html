@@ -4,8 +4,27 @@
     <meta charset="utf-8" />
     <title>قطع غيار · لوحة الإدارة</title>
     <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0F172A" />
+    <meta name="description" content="لوحة إدارة منصة قطع غيار الموبايل" />
+
+    <!-- Android / Chromium installability -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="لوحة الإدارة" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+    <!-- iOS Safari Add to Home Screen -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="لوحة الإدارة" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -15,5 +34,6 @@
   </head>
   <body>
     <app-root></app-root>
+    <noscript>يرجى تفعيل JavaScript لاستخدام لوحة الإدارة.</noscript>
   </body>
 </html>

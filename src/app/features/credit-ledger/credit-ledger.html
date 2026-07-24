@@ -81,7 +81,27 @@
             </li>
           }
         </ul>
+        @if (txTotalPages() > 1) {
+          <app-admin-pager
+            [page]="txPage()"
+            [totalPages]="txTotalPages()"
+            [limit]="20"
+            itemLabel="معاملة"
+            ariaLabel="صفحات المعاملات"
+            (pageChange)="goTxPage($event)"
+          />
+        }
       </aside>
     }
   </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="20"
+    itemLabel="محفظة"
+    ariaLabel="صفحات المحافظ"
+    (pageChange)="goPage($event)"
+  />
 </section>

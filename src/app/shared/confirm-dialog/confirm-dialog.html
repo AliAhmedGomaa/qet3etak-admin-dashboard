@@ -1,0 +1,35 @@
+@if (open()) {
+  <div class="confirm-overlay" (click)="onCancel()" role="presentation">
+    <div
+      class="confirm-dialog"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+      aria-describedby="confirm-dialog-desc"
+      (click)="$event.stopPropagation()"
+    >
+      <h2 id="confirm-dialog-title">{{ title() }}</h2>
+      @if (message()) {
+        <p id="confirm-dialog-desc">{{ message() }}</p>
+      }
+      <div class="confirm-dialog__actions">
+        <button
+          type="button"
+          class="btn btn-ghost"
+          (click)="onCancel()"
+          [disabled]="busy()"
+        >
+          {{ cancelLabel() }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          (click)="onConfirm()"
+          [disabled]="busy()"
+        >
+          {{ busy() ? 'جارٍ الحذف…' : confirmLabel() }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

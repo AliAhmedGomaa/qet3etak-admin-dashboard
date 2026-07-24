@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { PageParams, Paginated } from '../pagination';
 
 export type OrderStatus = 'RECEIVED' | 'PREPARING' | 'SHIPPED' | 'DELIVERED';
 
@@ -30,6 +31,12 @@ export interface AdminWallet {
     note: string;
     createdAt?: string;
   }>;
+  transactionsMeta?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 export interface AdminOrder {
@@ -49,8 +56,25 @@ export class AdminCommerceService {
   private readonly http = inject(HttpClient);
   private readonly api = environment.apiUrl;
 
-  wallets(): Observable<AdminWallet[]> {
-    return this.http.get<AdminWallet[]>(`${this.api}/admin/wallets`);
+  wallets(params: PageParams = {}): Observable<Paginated<AdminWallet>> {
+    let httpParams = new HttpParams();
+    if (params.page) httpParams = httpParams.set('page', String(params.page));
+    if (params.limit) httpParams = httpParams.set('limit', String(params.limit));
+    return this.http.get<Paginated<AdminWallet>>(`${this.api}/admin/wallets`, {
+      params: httpParams,
+    });
+  }
+
+  wallet(
+    shopId: string,
+    params: PageParams = {},
+  ): Observable<AdminWallet> {
+    let httpParams = new HttpParams();
+    if (params.page) httpParams = httpParams.set('page', String(params.page));
+    if (params.limit) httpParams = httpParams.set('limit', String(params.limit));
+    return this.http.get<AdminWallet>(`${this.api}/admin/wallets/${shopId}`, {
+      params: httpParams,
+    });
   }
 
   setCreditLimit(shopId: string, creditLimit: number, note?: string) {
@@ -67,8 +91,15 @@ export class AdminCommerceService {
     );
   }
 
-  orders(): Observable<AdminOrder[]> {
-    return this.http.get<AdminOrder[]>(`${this.api}/admin/orders`);
+  orders(params: PageParams = {}): Observable<Paginated<AdminOrder>> {
+    let httpParams = new HttpParams();
+    if (params.page) httpParams = httpParams.set('page', String(params.page));
+    if (params.limit) httpParams = httpParams.set('limit', String(params.limit));
+    const q = params.q?.trim();
+    if (q) httpParams = httpParams.set('q', q);
+    return this.http.get<Paginated<AdminOrder>>(`${this.api}/admin/orders`, {
+      params: httpParams,
+    });
   }
 
   updateOrderStatus(id: string, status: OrderStatus, note?: string) {

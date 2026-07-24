@@ -1,0 +1,53 @@
+<div class="ss" [class.is-open]="isOpen()" [class.is-disabled]="isDisabled()">
+  <button
+    type="button"
+    class="ss__trigger"
+    [disabled]="isDisabled()"
+    [attr.aria-expanded]="isOpen()"
+    aria-haspopup="listbox"
+    (click)="toggle()"
+  >
+    <span class="ss__value" [class.is-placeholder]="!selectedLabel()">
+      {{ selectedLabel() || placeholder() }}
+    </span>
+    <svg class="ss__caret" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </button>
+
+  @if (isOpen()) {
+    <div class="ss__panel">
+      <div class="ss__search">
+        <input
+          #searchInput
+          type="text"
+          [value]="search()"
+          [placeholder]="searchPlaceholder()"
+          (input)="onSearch($any($event.target).value)"
+          (keydown)="onKeydown($event)"
+        />
+      </div>
+      <ul class="ss__list" role="listbox">
+        @for (option of filtered(); track option.value; let i = $index) {
+          <li
+            role="option"
+            class="ss__option"
+            [class.is-active]="i === activeIndex()"
+            [class.is-selected]="option.value === value()"
+            [class.is-disabled]="option.disabled"
+            [attr.aria-selected]="option.value === value()"
+            (click)="select(option)"
+            (mouseenter)="activeIndex.set(i)"
+          >
+            <span class="ss__label">{{ option.label }}</span>
+            @if (option.hint) {
+              <span class="ss__hint">{{ option.hint }}</span>
+            }
+          </li>
+        } @empty {
+          <li class="ss__empty">{{ emptyText() }}</li>
+        }
+      </ul>
+    </div>
+  }
+</div>

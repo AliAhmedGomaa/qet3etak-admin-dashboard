@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { PageParams, Paginated } from '../pagination';
 
 export type SpecialRequestStatus = 'PENDING' | 'QUOTED' | 'FULFILLED';
 
@@ -26,12 +27,19 @@ export class AdminSpecialRequestsApi {
   private readonly http = inject(HttpClient);
   private readonly api = environment.apiUrl;
 
-  list(status?: SpecialRequestStatus): Observable<AdminSpecialRequest[]> {
-    let params = new HttpParams();
-    if (status) params = params.set('status', status);
-    return this.http.get<AdminSpecialRequest[]>(
+  list(
+    status?: SpecialRequestStatus,
+    params: PageParams = {},
+  ): Observable<Paginated<AdminSpecialRequest>> {
+    let httpParams = new HttpParams();
+    if (status) httpParams = httpParams.set('status', status);
+    if (params.page) httpParams = httpParams.set('page', String(params.page));
+    if (params.limit) httpParams = httpParams.set('limit', String(params.limit));
+    const q = params.q?.trim();
+    if (q) httpParams = httpParams.set('q', q);
+    return this.http.get<Paginated<AdminSpecialRequest>>(
       `${this.api}/admin/special-requests`,
-      { params },
+      { params: httpParams },
     );
   }
 

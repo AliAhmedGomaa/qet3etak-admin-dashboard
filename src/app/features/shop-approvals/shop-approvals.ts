@@ -9,10 +9,11 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ShopUser } from '../../core/auth/auth.models';
 import { ShopsAdminService } from '../../core/shops/shops-admin.service';
+import { AdminPager } from '../../shared/admin-pager/admin-pager';
 
 @Component({
   selector: 'app-shop-approvals',
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, AdminPager],
   templateUrl: './shop-approvals.html',
   styleUrl: './shop-approvals.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,6 +25,9 @@ export class ShopApprovals implements OnInit {
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly busyId = signal<string | null>(null);
+  protected readonly page = signal(1);
+  protected readonly totalPages = signal(1);
+  protected readonly total = signal(0);
 
   protected readonly rejectTarget = signal<ShopUser | null>(null);
   protected readonly previewSrc = signal<string | null>(null);
@@ -46,16 +50,28 @@ export class ShopApprovals implements OnInit {
   protected load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.shopsApi.list('PENDING_VERIFICATION').subscribe({
-      next: (rows) => {
-        this.shops.set(rows);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.error.set('تعذر تحميل المتاجر المعلقة');
-      },
-    });
+    this.shopsApi
+      .list('PENDING_VERIFICATION', { page: this.page(), limit: 20 })
+      .subscribe({
+        next: (res) => {
+          this.shops.set(res.items);
+          this.page.set(res.page);
+          this.totalPages.set(res.totalPages);
+          this.total.set(res.total);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.loading.set(false);
+          this.error.set('تعذر تحميل المتاجر المعلقة');
+        },
+      });
+  }
+
+  protected goPage(next: number): void {
+    const page = Math.min(this.totalPages(), Math.max(1, next));
+    if (page === this.page()) return;
+    this.page.set(page);
+    this.load();
   }
 
   protected approve(shop: ShopUser): void {
@@ -63,7 +79,7 @@ export class ShopApprovals implements OnInit {
     this.shopsApi.updateStatus(shop.id, 'APPROVED').subscribe({
       next: () => {
         this.busyId.set(null);
-        this.shops.update((list) => list.filter((s) => s.id !== shop.id));
+        this.load();
       },
       error: () => {
         this.busyId.set(null);
@@ -93,7 +109,7 @@ export class ShopApprovals implements OnInit {
         next: () => {
           this.busyId.set(null);
           this.closeReject();
-          this.shops.update((list) => list.filter((s) => s.id !== shop.id));
+          this.load();
         },
         error: () => {
           this.busyId.set(null);

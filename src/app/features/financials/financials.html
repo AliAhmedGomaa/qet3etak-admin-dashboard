@@ -1,0 +1,219 @@
+<section class="fin" dir="rtl">
+  <header class="fin__head">
+    <div>
+      <h1>التحليلات المالية</h1>
+      <p>الأرباح والخسائر · الإيرادات مقابل التكاليف والمصروفات التشغيلية.</p>
+    </div>
+    <div class="fin__actions">
+      <button type="button" class="btn" (click)="openModal('expense')">+ مصروف تشغيلي</button>
+      <button type="button" class="btn btn--warn" (click)="openModal('damaged')">تسجيل تالف / هالك</button>
+    </div>
+  </header>
+
+  <div class="fin__range" role="tablist">
+    @for (p of presets; track p.id) {
+      <button
+        type="button"
+        role="tab"
+        class="range__btn"
+        [class.is-on]="preset() === p.id"
+        [attr.aria-selected]="preset() === p.id"
+        (click)="setPreset(p.id)"
+      >
+        {{ p.label }}
+      </button>
+    }
+    <button type="button" class="btn btn--ghost" (click)="load()">تحديث</button>
+  </div>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  @if (loading() && !report()) {
+    <p class="muted">جارٍ التحميل…</p>
+  }
+
+  @if (report(); as r) {
+    <div class="kpis">
+      <article class="kpi kpi--revenue">
+        <span class="kpi__label">إجمالي الإيرادات</span>
+        <strong class="kpi__value">{{ r.totalRevenue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
+        <small>{{ r.orderCount }} طلب · {{ r.unitsSold }} وحدة</small>
+      </article>
+
+      <article class="kpi kpi--margin">
+        <span class="kpi__label">هامش الربح الإجمالي</span>
+        <strong class="kpi__value">{{ r.grossMargin | number: '1.0-1' }}%</strong>
+        <small>ربح إجمالي {{ r.grossProfit | currency: 'EGP':'symbol-narrow':'1.0-0' }}</small>
+      </article>
+
+      <article class="kpi kpi--expense">
+        <span class="kpi__label">إجمالي المصروفات</span>
+        <strong class="kpi__value">{{ r.totalExpenses | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
+        <small>تكلفة البضاعة {{ r.totalCogs | currency: 'EGP':'symbol-narrow':'1.0-0' }}</small>
+      </article>
+
+      <article class="kpi" [class.kpi--profit]="r.netProfit >= 0" [class.kpi--loss]="r.netProfit < 0">
+        <span class="kpi__label">صافي الربح</span>
+        <strong class="kpi__value">{{ r.netProfit | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
+        <small>هامش صافٍ {{ r.netMargin | number: '1.0-1' }}%</small>
+      </article>
+    </div>
+
+    <div class="charts">
+      <div class="card chart-card">
+        <h2>نظرة عامة على الأداء</h2>
+        <div class="chart-box">
+          <canvas #barCanvas></canvas>
+        </div>
+      </div>
+      <div class="card chart-card">
+        <h2>توزيع المصروفات</h2>
+        @if (r.expensesByCategory.length) {
+          <div class="chart-box">
+            <canvas #doughnutCanvas></canvas>
+          </div>
+        } @else {
+          <p class="muted">لا توجد مصروفات في هذه الفترة.</p>
+        }
+      </div>
+    </div>
+
+    <div class="pnl-grid">
+      <div class="card">
+        <h2>قائمة الأرباح والخسائر</h2>
+        <table class="pnl">
+          <tbody>
+            <tr>
+              <td>إجمالي الإيرادات</td>
+              <td class="num pos">{{ r.totalRevenue | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td>(-) تكلفة البضاعة المباعة</td>
+              <td class="num neg">{{ r.totalCogs | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+            </tr>
+            <tr class="row-sum">
+              <td>= إجمالي الربح</td>
+              <td class="num">{{ r.grossProfit | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td>(-) المصروفات التشغيلية</td>
+              <td class="num neg">{{ r.totalExpenses | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+            </tr>
+            <tr class="row-total" [class.is-loss]="r.netProfit < 0">
+              <td>= صافي الربح</td>
+              <td class="num">{{ r.netProfit | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>أحدث المصروفات</h2>
+        @if (expenses().length) {
+          <ul class="exp-list">
+            @for (e of expenses(); track e.id) {
+              <li>
+                <div>
+                  <strong>{{ categoryLabel(e.category) }}</strong>
+                  <small>{{ e.description || '—' }}</small>
+                  <time>{{ e.date | date: 'y/MM/dd' }}</time>
+                </div>
+                <div class="exp-list__end">
+                  <span class="amount">{{ e.amount | currency: 'EGP':'symbol-narrow':'1.0-2' }}</span>
+                  <button type="button" class="del" (click)="removeExpense(e.id)" aria-label="حذف">✕</button>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="muted">لا توجد مصروفات مسجلة.</p>
+        }
+      </div>
+    </div>
+  }
+
+  @if (modalOpen()) {
+    <div class="overlay" (click)="closeModal()">
+      <div class="modal" dir="rtl" (click)="$event.stopPropagation()">
+        <div class="modal__tabs">
+          <button
+            type="button"
+            [class.is-on]="modalTab() === 'expense'"
+            (click)="modalTab.set('expense')"
+          >مصروف تشغيلي</button>
+          <button
+            type="button"
+            [class.is-on]="modalTab() === 'damaged'"
+            (click)="modalTab.set('damaged')"
+          >تالف / هالك</button>
+        </div>
+
+        @if (modalError()) {
+          <p class="err">{{ modalError() }}</p>
+        }
+
+        @if (modalTab() === 'expense') {
+          <form class="form" (ngSubmit)="saveExpense()">
+            <label>
+              الفئة
+              <app-searchable-select
+                [options]="categoryOptions"
+                [(ngModel)]="expenseForm.category"
+                name="category"
+                placeholder="اختر الفئة"
+              />
+            </label>
+            <label>
+              المبلغ (ج.م)
+              <input type="number" min="0" step="0.01" [(ngModel)]="expenseForm.amount" name="amount" />
+            </label>
+            <label>
+              التاريخ
+              <input type="date" [(ngModel)]="expenseForm.date" name="date" />
+            </label>
+            <label>
+              الوصف
+              <input type="text" [(ngModel)]="expenseForm.description" name="description" placeholder="اختياري" />
+            </label>
+            <div class="form__actions">
+              <button type="button" class="btn btn--ghost" (click)="closeModal()">إلغاء</button>
+              <button type="submit" class="btn btn--primary" [disabled]="saving()">
+                {{ saving() ? 'جارٍ الحفظ…' : 'حفظ المصروف' }}
+              </button>
+            </div>
+          </form>
+        } @else {
+          <form class="form" (ngSubmit)="saveDamaged()">
+            <label>
+              المنتج
+              <app-searchable-select
+                [options]="productOptions()"
+                [(ngModel)]="damagedForm.productId"
+                name="productId"
+                placeholder="اختر المنتج"
+                searchPlaceholder="ابحث عن منتج…"
+              />
+            </label>
+            <label>
+              الكمية التالفة
+              <input type="number" min="1" step="1" [(ngModel)]="damagedForm.quantity" name="quantity" />
+            </label>
+            <label>
+              السبب / ملاحظة
+              <input type="text" [(ngModel)]="damagedForm.description" name="ddesc" placeholder="اختياري" />
+            </label>
+            <p class="hint">سيتم خصم الكمية من المخزون وتسجيل قيمتها كخسارة بسعر التكلفة.</p>
+            <div class="form__actions">
+              <button type="button" class="btn btn--ghost" (click)="closeModal()">إلغاء</button>
+              <button type="submit" class="btn btn--warn" [disabled]="saving()">
+                {{ saving() ? 'جارٍ الحفظ…' : 'تسجيل التالف' }}
+              </button>
+            </div>
+          </form>
+        }
+      </div>
+    </div>
+  }
+</section>

@@ -1,0 +1,68 @@
+@if (visible()) {
+  <nav class="pager" [attr.aria-label]="ariaLabel()">
+    <p class="pager__summary">
+      <strong>{{ rangeLabel() }}</strong>
+      <span>{{ pageLabel() }}</span>
+    </p>
+
+    <div class="pager__controls">
+      <button
+        type="button"
+        class="pager__nav"
+        (click)="prev()"
+        [disabled]="page() <= 1"
+        aria-label="الصفحة السابقة"
+      >
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path
+            d="M7.5 4.5L13 10l-5.5 5.5"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <span>السابق</span>
+      </button>
+
+      <div class="pager__pages" role="list">
+        @for (item of pages(); track $index) {
+          @if (item === 'gap') {
+            <span class="pager__gap" aria-hidden="true">…</span>
+          } @else {
+            <button
+              type="button"
+              class="pager__page"
+              role="listitem"
+              [class.is-active]="item === page()"
+              [attr.aria-current]="item === page() ? 'page' : null"
+              [attr.aria-label]="'الصفحة ' + item"
+              (click)="go(item)"
+            >
+              {{ item }}
+            </button>
+          }
+        }
+      </div>
+
+      <button
+        type="button"
+        class="pager__nav"
+        (click)="next()"
+        [disabled]="page() >= totalPages()"
+        aria-label="الصفحة التالية"
+      >
+        <span>التالي</span>
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path
+            d="M12.5 4.5L7 10l5.5 5.5"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    </div>
+  </nav>
+}

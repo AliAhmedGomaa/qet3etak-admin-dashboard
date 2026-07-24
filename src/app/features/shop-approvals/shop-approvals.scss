@@ -1,6 +1,10 @@
 .approvals {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1.25rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .approvals__header {
@@ -8,6 +12,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .approvals__header h1 {
@@ -31,6 +36,8 @@
 }
 
 .approvals__table-wrap {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(14px);

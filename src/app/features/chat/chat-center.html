@@ -1,0 +1,81 @@
+<section class="chatc" dir="rtl">
+  <aside class="chatc__list">
+    <header class="chatc__list-head">
+      <h2>المحادثات</h2>
+      <span class="dot" [class.on]="chat.connected()"></span>
+    </header>
+
+    @if (chat.conversations().length === 0) {
+      <p class="chatc__empty">لا توجد محادثات بعد.</p>
+    }
+
+    <ul>
+      @for (conv of chat.conversations(); track conv.shopId) {
+        <li>
+          <button
+            type="button"
+            class="conv"
+            [class.active]="conv.shopId === chat.activeShopId()"
+            (click)="select(conv.shopId)"
+          >
+            <span class="conv__avatar">{{ initials(conv.shopName) }}</span>
+            <span class="conv__body">
+              <span class="conv__top">
+                <strong>{{ conv.shopName || 'متجر' }}</strong>
+                <time>{{ conv.lastMessageAt | date: 'shortTime' }}</time>
+              </span>
+              <span class="conv__last">{{ conv.lastMessage || '—' }}</span>
+            </span>
+            @if (conv.unreadForAdmin > 0) {
+              <em class="conv__badge">{{ conv.unreadForAdmin }}</em>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+  </aside>
+
+  <div class="chatc__thread">
+    @if (!activeConversation()) {
+      <div class="chatc__placeholder">
+        <span aria-hidden="true">💬</span>
+        <p>اختر محادثة للبدء</p>
+      </div>
+    } @else {
+      <header class="chatc__thread-head">
+        <span class="conv__avatar">{{ initials(activeConversation()!.shopName) }}</span>
+        <div>
+          <strong>{{ activeConversation()!.shopName || 'متجر' }}</strong>
+          @if (chat.typingShopId() === activeConversation()!.shopId) {
+            <small class="typing">يكتب الآن…</small>
+          }
+        </div>
+      </header>
+
+      <div class="chatc__body" #scrollBox>
+        @for (msg of chat.messages(); track msg.id) {
+          <div
+            class="bubble"
+            [class.bubble--mine]="msg.senderRole === 'ADMIN'"
+            [class.bubble--them]="msg.senderRole === 'SHOP_OWNER'"
+          >
+            <p>{{ msg.text }}</p>
+            <time>{{ msg.createdAt | date: 'shortTime' }}</time>
+          </div>
+        }
+      </div>
+
+      <form class="chatc__compose" (ngSubmit)="send()">
+        <textarea
+          rows="1"
+          placeholder="اكتب ردك…"
+          [ngModel]="draft()"
+          (ngModelChange)="onInput($event)"
+          (keydown)="onKeydown($event)"
+          name="draft"
+        ></textarea>
+        <button type="submit" [disabled]="!draft().trim()">إرسال</button>
+      </form>
+    }
+  </div>
+</section>

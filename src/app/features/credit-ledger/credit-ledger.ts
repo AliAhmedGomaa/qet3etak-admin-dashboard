@@ -12,10 +12,11 @@ import {
   AdminWallet,
 } from '../../core/commerce/admin-commerce.service';
 import { walletTxAr } from '../../core/i18n/ar-labels';
+import { AdminPager } from '../../shared/admin-pager/admin-pager';
 
 @Component({
   selector: 'app-credit-ledger',
-  imports: [CurrencyPipe, DatePipe, PercentPipe, FormsModule],
+  imports: [CurrencyPipe, DatePipe, PercentPipe, FormsModule, AdminPager],
   templateUrl: './credit-ledger.html',
   styleUrl: './credit-ledger.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,6 +28,11 @@ export class CreditLedger implements OnInit {
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly selected = signal<AdminWallet | null>(null);
+  protected readonly page = signal(1);
+  protected readonly totalPages = signal(1);
+  protected readonly total = signal(0);
+  protected readonly txPage = signal(1);
+  protected readonly txTotalPages = signal(1);
 
   protected limitDraft = 0;
   protected paymentDraft = 0;
@@ -38,14 +44,18 @@ export class CreditLedger implements OnInit {
 
   protected load(): void {
     this.loading.set(true);
-    this.api.wallets().subscribe({
-      next: (rows) => {
-        this.wallets.set(rows);
+    this.api.wallets({ page: this.page(), limit: 20 }).subscribe({
+      next: (res) => {
+        this.wallets.set(res.items);
+        this.page.set(res.page);
+        this.totalPages.set(res.totalPages);
+        this.total.set(res.total);
         this.loading.set(false);
         const sel = this.selected();
         if (sel) {
-          const fresh = rows.find((w) => w.id === sel.id);
+          const fresh = res.items.find((w) => w.id === sel.id);
           if (fresh) this.open(fresh);
+          else this.loadSelectedWallet(this.shopId(sel));
         }
       },
       error: () => {
@@ -53,6 +63,21 @@ export class CreditLedger implements OnInit {
         this.error.set('تعذر تحميل دفاتر الائتمان');
       },
     });
+  }
+
+  protected goPage(next: number): void {
+    const page = Math.min(this.totalPages(), Math.max(1, next));
+    if (page === this.page()) return;
+    this.page.set(page);
+    this.load();
+  }
+
+  protected goTxPage(next: number): void {
+    const page = Math.min(this.txTotalPages(), Math.max(1, next));
+    if (page === this.txPage()) return;
+    this.txPage.set(page);
+    const sel = this.selected();
+    if (sel) this.loadSelectedWallet(this.shopId(sel));
   }
 
   protected shopName(w: AdminWallet): string {
@@ -81,10 +106,25 @@ export class CreditLedger implements OnInit {
   }
 
   protected open(w: AdminWallet): void {
-    this.selected.set(w);
+    this.selected.set({ ...w, transactions: w.transactions ?? [] });
     this.limitDraft = w.creditLimit;
     this.paymentDraft = 0;
     this.paymentNote = '';
+    this.txPage.set(1);
+    this.loadSelectedWallet(this.shopId(w));
+  }
+
+  private loadSelectedWallet(shopId: string): void {
+    if (!shopId) return;
+    this.api.wallet(shopId, { page: this.txPage(), limit: 20 }).subscribe({
+      next: (detail) => {
+        this.selected.set(detail);
+        this.txPage.set(detail.transactionsMeta?.page ?? 1);
+        this.txTotalPages.set(detail.transactionsMeta?.totalPages ?? 1);
+        this.limitDraft = detail.creditLimit;
+      },
+      error: () => this.error.set('تعذر تحميل معاملات المحفظة'),
+    });
   }
 
   protected saveLimit(): void {

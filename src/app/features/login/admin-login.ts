@@ -5,7 +5,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
@@ -16,6 +16,9 @@ import { AuthService } from '../../core/auth/auth.service';
       <div class="login__card">
         <h1>قطع غيار · الإدارة</h1>
         <p>سجّل الدخول لمراجعة المتاجر والمخزون والطلبات</p>
+        @if (expired()) {
+          <p class="notice">انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى.</p>
+        }
         <form [formGroup]="form" (ngSubmit)="submit()">
           <label>
             <span>رقم الجوال</span>
@@ -67,6 +70,7 @@ import { AuthService } from '../../core/auth/auth.service';
       color: #fff; font: inherit; font-weight: 700; cursor: pointer;
     }
     .err { margin: 0; padding: 0.65rem 0.8rem; background: #fef2f2; color: #991b1b; border-radius: 0.65rem; font-size: 0.85rem; }
+    .notice { margin: 0 0 1rem; padding: 0.65rem 0.8rem; background: #fffbeb; color: #92400e; border-radius: 0.65rem; font-size: 0.85rem; }
     .hint { margin: 1rem 0 0; font-size: 0.75rem; color: #94a3b8; }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,9 +79,13 @@ export class AdminLogin {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly expired = signal(
+    this.route.snapshot.queryParamMap.get('expired') === '1',
+  );
 
   protected readonly form = this.fb.nonNullable.group({
     phone: ['0500000000', Validators.required],

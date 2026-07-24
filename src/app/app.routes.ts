@@ -27,11 +27,28 @@ export const routes: Routes = [
           import('./features/inventory/inventory').then((m) => m.Inventory),
       },
       {
+        path: 'brands',
+        loadComponent: () =>
+          import('./features/brands/brands-admin').then((m) => m.BrandsAdmin),
+      },
+      {
+        path: 'categories',
+        loadComponent: () =>
+          import('./features/categories/categories-admin').then(
+            (m) => m.CategoriesAdmin,
+          ),
+      },
+      {
         path: 'credit',
         loadComponent: () =>
           import('./features/credit-ledger/credit-ledger').then(
             (m) => m.CreditLedger,
           ),
+      },
+      {
+        path: 'financials',
+        loadComponent: () =>
+          import('./features/financials/financials').then((m) => m.Financials),
       },
       {
         path: 'orders-board',
@@ -51,6 +68,11 @@ export const routes: Routes = [
         path: 'broadcast',
         loadComponent: () =>
           import('./features/broadcast/broadcast').then((m) => m.BroadcastPage),
+      },
+      {
+        path: 'chat',
+        loadComponent: () =>
+          import('./features/chat/chat-center').then((m) => m.ChatCenter),
       },
     ],
   },

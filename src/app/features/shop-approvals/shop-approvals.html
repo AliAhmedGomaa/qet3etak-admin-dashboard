@@ -80,6 +80,16 @@
       </tbody>
     </table>
   </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="20"
+    itemLabel="متجر"
+    ariaLabel="صفحات المتاجر"
+    (pageChange)="goPage($event)"
+  />
 </section>
 
 @if (rejectTarget(); as shop) {

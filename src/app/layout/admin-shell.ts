@@ -1,79 +1,517 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
+import { ChatService } from '../core/chat/chat.service';
+import { PushNotificationService } from '../core/push/push-notification.service';
+import { PwaInstallService } from '../core/pwa/pwa-install.service';
 
 @Component({
   selector: 'app-admin-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
-    <div class="shell" dir="rtl">
+    <div class="shell" dir="rtl" [class.shell--nav-open]="navOpen()">
+      @if (navOpen()) {
+        <button type="button" class="scrim" aria-label="إغلاق القائمة" (click)="navOpen.set(false)"></button>
+      }
+
       <aside class="sidebar">
         <div class="brand">
           <span class="mark">ق</span>
-          <div>
+          <div class="brand__text">
             <strong>قطع غيار</strong>
             <small>لوحة الإدارة</small>
           </div>
+          <button type="button" class="sidebar__close" (click)="navOpen.set(false)" aria-label="إغلاق">
+            ✕
+          </button>
         </div>
-        <nav>
-          <a routerLink="/approvals" routerLinkActive="active">اعتماد المتاجر</a>
-          <a routerLink="/inventory" routerLinkActive="active">المخزون</a>
-          <a routerLink="/credit" routerLinkActive="active">دفتر الائتمان</a>
-          <a routerLink="/orders-board" routerLinkActive="active">لوحة الطلبات</a>
-          <a routerLink="/special-requests" routerLinkActive="active">الطلبات الخاصة</a>
-          <a routerLink="/broadcast" routerLinkActive="active">بث إعلان</a>
+
+        <nav class="nav">
+          <span class="nav__label">القائمة</span>
+          @for (item of navItems; track item.path) {
+            <a [routerLink]="item.path" routerLinkActive="active" (click)="navOpen.set(false)">
+              <svg class="nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                <path [attr.d]="item.icon" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span>{{ item.label }}</span>
+              @if (item.path === '/chat' && chat.totalUnread() > 0) {
+                <em class="nav__badge">{{ chat.totalUnread() }}</em>
+              }
+            </a>
+          }
         </nav>
-        <button type="button" class="logout" (click)="auth.logout()">تسجيل الخروج</button>
+
+        <div class="sidebar__footer">
+          <button type="button" class="logout" (click)="auth.logout()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span>تسجيل الخروج</span>
+          </button>
+        </div>
       </aside>
+
       <main class="main">
         <header class="toolbar">
-          <span>{{ auth.user()?.fullName }}</span>
+          <div class="toolbar__start">
+            <button type="button" class="menu-btn" (click)="navOpen.set(true)" aria-label="القائمة">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            </button>
+            <span class="toolbar__name">{{ auth.user()?.fullName }}</span>
+          </div>
+          <div class="toolbar__actions">
+            @if (pwa.canNativeInstall()) {
+              <button type="button" class="bell install" (click)="installApp()">تثبيت التطبيق</button>
+            }
+            @if (push.supported()) {
+              <button
+                type="button"
+                class="bell"
+                [class.on]="push.enabled()"
+                [disabled]="push.busy()"
+                (click)="push.toggle()"
+                [title]="push.enabled() ? 'إيقاف إشعارات المحادثات' : 'تفعيل إشعارات المحادثات'"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                  <path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span class="bell__label">{{ push.enabled() ? 'الإشعارات مفعّلة' : 'تفعيل الإشعارات' }}</span>
+              </button>
+            }
+          </div>
         </header>
-        <div class="content">
+        <div class="content app-shell-content">
           <router-outlet />
         </div>
       </main>
     </div>
   `,
   styles: `
-    .shell { display: flex; min-height: 100dvh; background: #f8fafc; }
+    .shell {
+      display: flex;
+      height: 100dvh;
+      min-height: 100dvh;
+      overflow: hidden;
+      background: #f8fafc;
+    }
+
     .sidebar {
-      width: 16rem; background: #0f172a; color: #f8fafc;
-      padding: 1.25rem 0.85rem; display: flex; flex-direction: column; gap: 1.25rem;
+      width: 15.5rem;
+      background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+      color: #f8fafc;
+      padding: 1.25rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      border-inline-start: 1px solid rgba(255, 255, 255, 0.06);
     }
-    .brand { display: flex; gap: 0.75rem; align-items: center; padding: 0 0.4rem; }
+
+    .brand {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.25rem 0.5rem 1.25rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 1rem;
+    }
+
     .mark {
-      width: 2.25rem; height: 2.25rem; border-radius: 0.65rem; background: #10b880;
-      display: grid; place-items: center; font-weight: 800;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 0.75rem;
+      background: linear-gradient(135deg, #10b880, #059669);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(16, 184, 128, 0.35);
     }
-    .brand strong { display: block; font-size: 0.95rem; }
-    .brand small { color: rgba(248,250,252,0.55); font-size: 0.7rem; }
-    nav { display: grid; gap: 0.35rem; flex: 1; }
-    nav a {
-      color: rgba(248,250,252,0.72); text-decoration: none; min-height: 2.75rem;
-      display: flex; align-items: center; padding: 0 0.85rem; border-radius: 0.65rem;
-      font-size: 0.9rem; font-weight: 500;
+
+    .brand__text strong {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 700;
+      line-height: 1.3;
     }
-    nav a:hover { background: rgba(255,255,255,0.08); color: #fff; }
-    nav a.active {
-      background: rgba(16,184,128,0.18); color: #fff;
+
+    .brand__text small {
+      color: rgba(248, 250, 252, 0.5);
+      font-size: 0.7rem;
+    }
+
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      align-content: start;
+      padding: 0 0.15rem;
+    }
+
+    .nav__label {
+      padding: 0 0.65rem 0.5rem;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: rgba(248, 250, 252, 0.35);
+    }
+
+    .nav a {
+      color: rgba(248, 250, 252, 0.68);
+      text-decoration: none;
+      height: 2.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0 0.75rem;
+      border-radius: 0.6rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .nav__icon {
+      width: 1.15rem;
+      height: 1.15rem;
+      flex-shrink: 0;
+      opacity: 0.75;
+    }
+
+    .nav a:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: #fff;
+    }
+
+    .nav a:hover .nav__icon {
+      opacity: 1;
+    }
+
+    .nav a.active {
+      background: rgba(16, 184, 128, 0.15);
+      color: #fff;
+      font-weight: 600;
       box-shadow: inset -3px 0 0 #10b880;
     }
+
+    .nav a.active .nav__icon {
+      opacity: 1;
+      color: #34d399;
+    }
+
+    .nav__badge {
+      margin-inline-start: auto;
+      min-width: 1.25rem;
+      height: 1.25rem;
+      padding: 0 0.35rem;
+      border-radius: 999px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 0.68rem;
+      font-style: normal;
+      font-weight: 800;
+      display: grid;
+      place-items: center;
+    }
+
+    .sidebar__footer {
+      margin-top: auto;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
     .logout {
-      border: 0; background: rgba(255,255,255,0.08); color: #fff; min-height: 2.75rem;
-      border-radius: 0.65rem; font: inherit; cursor: pointer;
+      width: 100%;
+      border: 0;
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(248, 250, 252, 0.8);
+      height: 2.5rem;
+      border-radius: 0.6rem;
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0.65rem;
+      padding: 0 0.75rem;
+      transition: background 0.15s, color 0.15s;
     }
-    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+    .logout svg {
+      width: 1.1rem;
+      height: 1.1rem;
+    }
+
+    .logout:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+    }
+
     .toolbar {
-      height: 3.75rem; display: flex; align-items: center; justify-content: flex-start;
-      padding: 0 1.5rem; border-bottom: 1px solid #e2e8f0;
-      background: rgba(255,255,255,0.75); backdrop-filter: blur(12px);
-      color: #64748b; font-size: 0.85rem;
+      height: 3.75rem;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      color: #64748b;
+      font-size: 0.85rem;
     }
-    .content { padding: 1.5rem; flex: 1; overflow: auto; }
+
+    .toolbar__start,
+    .toolbar__actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+
+    .toolbar__name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .menu-btn,
+    .sidebar__close {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border: 0;
+      border-radius: 0.6rem;
+      background: #f1f5f9;
+      color: #0f172a;
+      cursor: pointer;
+    }
+
+    .menu-btn svg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+
+    .scrim {
+      display: none;
+    }
+
+    .bell {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      height: 2.25rem;
+      padding: 0 0.85rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 0.6rem;
+      background: #fff;
+      color: #475569;
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .bell.install {
+      background: rgba(16, 184, 128, 0.12);
+      border-color: rgba(16, 184, 128, 0.35);
+      color: #059669;
+    }
+
+    .bell svg {
+      width: 1.05rem;
+      height: 1.05rem;
+    }
+
+    .bell:hover:not(:disabled) {
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    .bell.on {
+      border-color: rgba(16, 184, 128, 0.4);
+      background: rgba(16, 184, 128, 0.12);
+      color: #059669;
+    }
+
+    .bell:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .content {
+      padding: 1.5rem;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    @media (max-width: 900px) {
+      .shell {
+        display: block;
+      }
+
+      .scrim {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        border: 0;
+        background: rgba(15, 23, 42, 0.45);
+      }
+
+      .sidebar {
+        position: fixed;
+        inset-block: 0;
+        inset-inline-start: 0;
+        z-index: 50;
+        width: min(18rem, 86vw);
+        transform: translateX(110%);
+        transition: transform 0.22s ease;
+        box-shadow: -8px 0 32px rgba(15, 23, 42, 0.25);
+      }
+
+      .shell--nav-open .sidebar {
+        transform: translateX(0);
+      }
+
+      .menu-btn {
+        display: inline-flex;
+      }
+
+      .sidebar__close {
+        display: inline-flex;
+        margin-inline-start: auto;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+      }
+
+      .brand {
+        padding-inline-end: 0.25rem;
+      }
+
+      .toolbar {
+        padding-top: env(safe-area-inset-top, 0px);
+        height: calc(3.75rem + env(safe-area-inset-top, 0px));
+      }
+
+      .bell__label {
+        display: none;
+      }
+
+      .content {
+        padding: 1rem;
+      }
+    }
+
+    @media (min-width: 901px) {
+      .toolbar {
+        padding: 0 1.5rem;
+      }
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminShell {
+export class AdminShell implements OnInit {
+  private readonly router = inject(Router);
   protected readonly auth = inject(AuthService);
+  protected readonly chat = inject(ChatService);
+  protected readonly push = inject(PushNotificationService);
+  protected readonly pwa = inject(PwaInstallService);
+
+  protected readonly navOpen = signal(false);
+
+  ngOnInit(): void {
+    this.pwa.init();
+    this.chat.connect();
+    this.chat.loadConversations().subscribe();
+
+    this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe(() => this.navOpen.set(false));
+  }
+
+  protected async installApp(): Promise<void> {
+    await this.pwa.promptInstall();
+  }
+
+  protected readonly navItems = [
+    {
+      path: '/approvals',
+      label: 'اعتماد المتاجر',
+      icon: 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    },
+    {
+      path: '/inventory',
+      label: 'المخزون',
+      icon: 'M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9',
+    },
+    {
+      path: '/brands',
+      label: 'الماركات',
+      icon: 'M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z M6 6h.008v.008H6V6z',
+    },
+    {
+      path: '/categories',
+      label: 'الفئات',
+      icon: 'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z',
+    },
+    {
+      path: '/credit',
+      label: 'دفتر الائتمان',
+      icon: 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z',
+    },
+    {
+      path: '/financials',
+      label: 'التحليلات المالية',
+      icon: 'M3 3v18h18M18.75 8.25l-5.25 5.25-3-3L6.75 14.25',
+    },
+    {
+      path: '/orders-board',
+      label: 'لوحة الطلبات',
+      icon: 'M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125z',
+    },
+    {
+      path: '/special-requests',
+      label: 'الطلبات الخاصة',
+      icon: 'M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z',
+    },
+    {
+      path: '/broadcast',
+      label: 'بث إعلان',
+      icon: 'M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z',
+    },
+    {
+      path: '/chat',
+      label: 'المحادثات',
+      icon: 'M8.25 8.25h7.5M8.25 12h4.5m6.75-1.5a8.25 8.25 0 01-11.4 7.62L3 19.5l1.38-4.1A8.25 8.25 0 1119.5 10.5z',
+    },
+  ];
 }

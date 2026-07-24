@@ -1,0 +1,164 @@
+<section class="brands" dir="rtl">
+  <header class="brands__header">
+    <div>
+      <h1>الفئات</h1>
+      <p>إدارة فئات القطع الظاهرة في كتالوج الجملة وتطبيق المحلات.</p>
+    </div>
+    <div class="brands__actions">
+      <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
+      <button type="button" class="btn btn-primary" (click)="openCreate()">إضافة فئة</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  <div class="toolbar">
+    <label class="search">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M8.5 14.5a6 6 0 100-12 6 6 0 000 12zM17 17l-3.2-3.2"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <input
+        type="search"
+        [value]="searchDraft"
+        (input)="onSearchInput($any($event.target).value)"
+        placeholder="ابحث باسم الفئة…"
+        aria-label="بحث في الفئات"
+      />
+      @if (searchDraft) {
+        <button type="button" class="search__clear" (click)="clearSearch()" aria-label="مسح البحث">
+          مسح
+        </button>
+      }
+    </label>
+    @if (searchQuery()) {
+      <p class="search__hint">نتائج البحث عن «{{ searchQuery() }}»</p>
+    }
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>الأيقونة</th>
+          <th>الاسم</th>
+          <th>الترتيب</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="5" class="muted">جارٍ التحميل…</td></tr>
+        } @else if (categories().length === 0) {
+          <tr><td colspan="5" class="muted">{{ searchQuery() ? 'لا توجد نتائج لهذا البحث.' : 'لا توجد فئات بعد.' }}</td></tr>
+        } @else {
+          @for (category of categories(); track category.id) {
+            <tr>
+              <td>
+                @if (iconSrc(category)) {
+                  <img class="icon" [src]="iconSrc(category)" [alt]="category.name" width="40" height="40" />
+                } @else {
+                  <span class="icon-fallback">{{ initial(category.name) }}</span>
+                }
+              </td>
+              <td><strong>{{ category.name }}</strong></td>
+              <td>{{ category.sortOrder }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="chip"
+                  [class.chip--off]="!category.isActive"
+                  (click)="toggleActive(category)"
+                >
+                  {{ category.isActive ? 'نشط' : 'متوقف' }}
+                </button>
+              </td>
+              <td class="row-actions">
+                <button type="button" class="btn btn-ghost" (click)="openEdit(category)">تعديل</button>
+                <button type="button" class="btn btn-danger" (click)="remove(category)">حذف</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="20"
+    itemLabel="فئة"
+    ariaLabel="صفحات الفئات"
+    (pageChange)="goPage($event)"
+  />
+</section>
+
+@if (editorOpen()) {
+  <div class="overlay" (click)="closeEditor()">
+    <div class="drawer" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header>
+        <h2>{{ editingId() ? 'تعديل فئة' : 'فئة جديدة' }}</h2>
+        <button type="button" class="btn btn-ghost" (click)="closeEditor()">إغلاق</button>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <label>
+          الاسم
+          <input formControlName="name" placeholder="Screens, Batteries…" />
+        </label>
+
+        <label>
+          رابط الأيقونة (اختياري)
+          <input formControlName="iconUrl" placeholder="https://… أو ارفع صورة" />
+        </label>
+
+        <div class="upload-field">
+          <span class="upload-field__label">رفع أيقونة</span>
+          <app-file-upload
+            accept="image/*"
+            [previewUrl]="iconPreview()"
+            (fileSelected)="onIconSelected($event)"
+          />
+        </div>
+
+        <div class="grid-2">
+          <label>
+            الترتيب
+            <input type="number" formControlName="sortOrder" />
+          </label>
+          <label class="active-toggle">
+            <input type="checkbox" formControlName="isActive" />
+            <span>فئة نشطة</span>
+          </label>
+        </div>
+
+        <footer>
+          <button type="button" class="btn btn-ghost" (click)="closeEditor()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'جارٍ الحفظ…' : 'حفظ' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="!!deleteTarget()"
+  title="تأكيد الحذف"
+  [message]="deleteTarget() ? 'هل تريد حذف فئة «' + deleteTarget()!.name + '»؟ لا يمكن التراجع عن هذا الإجراء.' : ''"
+  confirmLabel="حذف الفئة"
+  [busy]="deleting()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()"
+/>

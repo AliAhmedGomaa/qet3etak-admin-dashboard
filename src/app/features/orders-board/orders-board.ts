@@ -12,6 +12,7 @@ import {
   OrderStatus,
 } from '../../core/commerce/admin-commerce.service';
 import { orderStatusAr, paymentMethodAr } from '../../core/i18n/ar-labels';
+import { AdminPager } from '../../shared/admin-pager/admin-pager';
 
 const COLUMNS: Array<{ status: OrderStatus; title: string }> = [
   { status: 'RECEIVED', title: orderStatusAr['RECEIVED'] },
@@ -22,7 +23,7 @@ const COLUMNS: Array<{ status: OrderStatus; title: string }> = [
 
 @Component({
   selector: 'app-orders-board',
-  imports: [CurrencyPipe, DatePipe],
+  imports: [CurrencyPipe, DatePipe, AdminPager],
   templateUrl: './orders-board.html',
   styleUrl: './orders-board.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,6 +36,12 @@ export class OrdersBoard implements OnInit {
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly draggingId = signal<string | null>(null);
+  protected readonly page = signal(1);
+  protected readonly totalPages = signal(1);
+  protected readonly total = signal(0);
+  protected readonly searchQuery = signal('');
+  protected searchDraft = '';
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.load();
@@ -42,16 +49,49 @@ export class OrdersBoard implements OnInit {
 
   protected load(): void {
     this.loading.set(true);
-    this.api.orders().subscribe({
-      next: (rows) => {
-        this.orders.set(rows);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.error.set('تعذر تحميل الطلبات');
-      },
-    });
+    this.api
+      .orders({ page: this.page(), limit: 100, q: this.searchQuery() || undefined })
+      .subscribe({
+        next: (res) => {
+          this.orders.set(res.items);
+          this.page.set(res.page);
+          this.totalPages.set(res.totalPages);
+          this.total.set(res.total);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.loading.set(false);
+          this.error.set('تعذر تحميل الطلبات');
+        },
+      });
+  }
+
+  protected onSearchInput(value: string): void {
+    this.searchDraft = value;
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      const next = value.trim();
+      if (next === this.searchQuery()) return;
+      this.searchQuery.set(next);
+      this.page.set(1);
+      this.load();
+    }, 320);
+  }
+
+  protected clearSearch(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchDraft = '';
+    if (!this.searchQuery()) return;
+    this.searchQuery.set('');
+    this.page.set(1);
+    this.load();
+  }
+
+  protected goPage(next: number): void {
+    const page = Math.min(this.totalPages(), Math.max(1, next));
+    if (page === this.page()) return;
+    this.page.set(page);
+    this.load();
   }
 
   protected byStatus(status: OrderStatus): AdminOrder[] {
@@ -81,7 +121,6 @@ export class OrdersBoard implements OnInit {
     const order = this.orders().find((o) => o.id === id);
     if (!order || order.status === status) return;
 
-    // Optimistic UI
     this.orders.update((list) =>
       list.map((o) => (o.id === id ? { ...o, status } : o)),
     );

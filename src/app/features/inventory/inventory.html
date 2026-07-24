@@ -14,6 +14,35 @@
     <p class="err">{{ error() }}</p>
   }
 
+  <div class="inventory__toolbar">
+    <label class="search">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M8.5 14.5a6 6 0 100-12 6 6 0 000 12zM17 17l-3.2-3.2"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <input
+        type="search"
+        [value]="searchDraft"
+        (input)="onSearchInput($any($event.target).value)"
+        placeholder="ابحث بالاسم، الماركة، الموديل، الفئة، SKU…"
+        aria-label="بحث في المخزون"
+      />
+      @if (searchDraft) {
+        <button type="button" class="search__clear" (click)="clearSearch()" aria-label="مسح البحث">
+          مسح
+        </button>
+      }
+    </label>
+    @if (searchQuery()) {
+      <p class="search__hint">نتائج البحث عن «{{ searchQuery() }}»</p>
+    }
+  </div>
+
   <div class="table-wrap">
     <table>
       <thead>
@@ -23,20 +52,24 @@
           <th>المخزون</th>
           <th>السعر الأساسي</th>
           <th>شرائح الجملة</th>
-          <th></th>
+          <th class="actions-col">إجراءات</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr><td colspan="6" class="muted">جارٍ التحميل…</td></tr>
         } @else if (products().length === 0) {
-          <tr><td colspan="6" class="muted">لا توجد منتجات بعد.</td></tr>
+          <tr>
+            <td colspan="6" class="muted">
+              {{ searchQuery() ? 'لا توجد نتائج لهذا البحث.' : 'لا توجد منتجات بعد.' }}
+            </td>
+          </tr>
         } @else {
           @for (product of products(); track product.id) {
             <tr>
               <td>
                 <div class="prod">
-                  <img [src]="product.imageUrl || '/favicon.ico'" [alt]="product.title" width="44" height="44" />
+                  <img [src]="mediaUrl(product.imageUrl) || '/favicon.ico'" [alt]="product.title" width="44" height="44" />
                   <div>
                     <strong>{{ product.title }}</strong>
                     <small>{{ product.brand }} · {{ product.model }} · {{ product.category }}</small>
@@ -72,9 +105,11 @@
                   <span class="muted">السعر الأساسي فقط</span>
                 }
               </td>
-              <td class="row-actions">
-                <button type="button" class="btn btn-ghost" (click)="openEdit(product)">تعديل</button>
-                <button type="button" class="btn btn-danger" (click)="remove(product)">حذف</button>
+              <td class="actions-cell">
+                <div class="row-actions">
+                  <button type="button" class="btn btn-ghost" (click)="openEdit(product)">تعديل</button>
+                  <button type="button" class="btn btn-danger" (click)="remove(product)">حذف</button>
+                </div>
               </td>
             </tr>
           }
@@ -82,6 +117,16 @@
       </tbody>
     </table>
   </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="20"
+    itemLabel="منتج"
+    ariaLabel="صفحات المخزون"
+    (pageChange)="goPage($event)"
+  />
 </section>
 
 @if (editorOpen()) {
@@ -96,22 +141,50 @@
         <div class="grid-2">
           <label>العنوان<input formControlName="title" /></label>
           <label>رمز SKU<input formControlName="sku" /></label>
-          <label>الماركة<input formControlName="brand" /></label>
+          <label>
+            الماركة
+            <app-searchable-select
+              [options]="brandOptions()"
+              formControlName="brand"
+              placeholder="اختر الماركة"
+              searchPlaceholder="ابحث عن ماركة…"
+            />
+          </label>
           <label>الموديل<input formControlName="model" /></label>
-          <label>الفئة<input formControlName="category" /></label>
+          <label>
+            الفئة
+            <app-searchable-select
+              [options]="categoryOptions()"
+              formControlName="category"
+              placeholder="اختر الفئة"
+              searchPlaceholder="ابحث عن فئة…"
+            />
+          </label>
+          <label>القطعة<input formControlName="part" placeholder="LCD Assembly, Battery Pack…" /></label>
           <label>
             درجة الجودة
-            <select formControlName="qualityGrade">
-              @for (g of grades; track g) {
-                <option [value]="g">{{ gradeLabel(g) }}</option>
-              }
-            </select>
+            <app-searchable-select
+              [options]="gradeOptions"
+              formControlName="qualityGrade"
+              placeholder="اختر الدرجة"
+            />
           </label>
           <label>المخزون<input type="number" min="0" formControlName="stockQuantity" /></label>
           <label>السعر الأساسي<input type="number" min="0" step="0.01" formControlName="basePrice" /></label>
         </div>
 
-        <label class="full">رابط الصورة<input formControlName="imageUrl" /></label>
+        <div class="upload-field full">
+          <span class="upload-field__label">صورة المنتج</span>
+          <app-file-upload
+            accept="image/jpeg,image/png,image/webp"
+            [previewUrl]="imagePreview()"
+            [invalid]="!editingId() && !imageFile && !imagePreview()"
+            (fileSelected)="onImageSelected($event)"
+          />
+          @if (!imagePreview() && !editingId()) {
+            <p class="hint">رفع صورة المنتج مطلوب عند الإضافة.</p>
+          }
+        </div>
 
         <label class="active-toggle">
           <input type="checkbox" formControlName="isActive" />
@@ -154,3 +227,13 @@
     </div>
   </div>
 }
+
+<app-confirm-dialog
+  [open]="!!deleteTarget()"
+  title="تأكيد الحذف"
+  [message]="deleteTarget() ? 'هل تريد حذف «' + deleteTarget()!.title + '»؟ لا يمكن التراجع عن هذا الإجراء.' : ''"
+  confirmLabel="حذف المنتج"
+  [busy]="deleting()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()"
+/>
