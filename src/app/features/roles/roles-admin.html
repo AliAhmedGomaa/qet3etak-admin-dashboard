@@ -149,10 +149,44 @@
           <textarea formControlName="description" rows="3" placeholder="وصف مختصر للدور"></textarea>
         </label>
 
-        <label>
-          الصلاحيات (مفصولة بفاصلة)
-          <input formControlName="permissionsText" placeholder="admin.panel" dir="ltr" />
-        </label>
+        <div class="field">
+          <span class="field__label">الصلاحيات</span>
+          <div class="perm-editor" dir="ltr">
+            @if (permissions().length) {
+              <div class="perm-chips" role="list">
+                @for (perm of permissions(); track perm) {
+                  <span class="perm-chip" role="listitem">
+                    <span class="perm-chip__text">{{ perm }}</span>
+                    <button
+                      type="button"
+                      class="perm-chip__remove"
+                      (click)="removePermission(perm)"
+                      [attr.aria-label]="'إزالة ' + perm"
+                    >
+                      ×
+                    </button>
+                  </span>
+                }
+              </div>
+            } @else {
+              <p class="perm-empty">لا توجد صلاحيات بعد.</p>
+            }
+            <div class="perm-add">
+              <input
+                type="text"
+                [value]="permissionDraft()"
+                (input)="permissionDraft.set($any($event.target).value)"
+                (keydown)="onPermissionKeydown($event)"
+                placeholder="admin.panel"
+                aria-label="إضافة صلاحية"
+              />
+              <button type="button" class="btn btn-ghost perm-add__btn" (click)="addPermission()">
+                إضافة
+              </button>
+            </div>
+          </div>
+          <span class="hint">اكتب الصلاحية ثم Enter أو إضافة. يمكن إزالة الشريحة بزر ×.</span>
+        </div>
 
         <label class="active-toggle">
           <input type="checkbox" formControlName="adminPanel" />

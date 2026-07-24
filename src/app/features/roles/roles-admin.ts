@@ -41,6 +41,8 @@ export class RolesAdmin implements OnInit {
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
   protected readonly deleteTarget = signal<AdminRole | null>(null);
   protected readonly deleting = signal(false);
+  protected readonly permissions = signal<string[]>([]);
+  protected readonly permissionDraft = signal('');
 
   protected readonly editingSystem = computed(() => {
     const id = this.editingId();
@@ -55,7 +57,6 @@ export class RolesAdmin implements OnInit {
       [Validators.required, Validators.pattern(/^[A-Z][A-Z0-9_]{1,31}$/)],
     ],
     description: [''],
-    permissionsText: [''],
     adminPanel: [true],
     isActive: [true],
   });
@@ -118,11 +119,12 @@ export class RolesAdmin implements OnInit {
 
   protected openCreate(): void {
     this.editingId.set(null);
+    this.permissions.set(['admin.panel']);
+    this.permissionDraft.set('');
     this.form.reset({
       name: '',
       code: '',
       description: '',
-      permissionsText: 'admin.panel',
       adminPanel: true,
       isActive: true,
     });
@@ -132,11 +134,12 @@ export class RolesAdmin implements OnInit {
 
   protected openEdit(role: AdminRole): void {
     this.editingId.set(role.id);
+    this.permissions.set([...(role.permissions ?? [])]);
+    this.permissionDraft.set('');
     this.form.reset({
       name: role.name,
       code: role.code,
       description: role.description ?? '',
-      permissionsText: (role.permissions ?? []).join(', '),
       adminPanel: role.adminPanel,
       isActive: role.isActive,
     });
@@ -151,7 +154,44 @@ export class RolesAdmin implements OnInit {
   protected closeEditor(): void {
     this.editorOpen.set(false);
     this.editingId.set(null);
+    this.permissions.set([]);
+    this.permissionDraft.set('');
     this.form.controls.code.enable();
+  }
+
+  protected addPermission(): void {
+    const parts = this.permissionDraft()
+      .split(/[,\s]+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (!parts.length) return;
+
+    const next = [...this.permissions()];
+    for (const part of parts) {
+      if (!next.includes(part)) next.push(part);
+    }
+    this.permissions.set(next);
+    this.permissionDraft.set('');
+  }
+
+  protected removePermission(permission: string): void {
+    this.permissions.update((list) => list.filter((p) => p !== permission));
+  }
+
+  protected onPermissionKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.addPermission();
+      return;
+    }
+    if (
+      event.key === 'Backspace' &&
+      !this.permissionDraft() &&
+      this.permissions().length
+    ) {
+      event.preventDefault();
+      this.permissions.update((list) => list.slice(0, -1));
+    }
   }
 
   protected save(): void {
@@ -159,10 +199,7 @@ export class RolesAdmin implements OnInit {
     if (this.form.invalid) return;
 
     const raw = this.form.getRawValue();
-    const permissions = raw.permissionsText
-      .split(/[,\s]+/)
-      .map((p) => p.trim())
-      .filter(Boolean);
+    const permissions = this.permissions();
 
     this.saving.set(true);
     this.error.set(null);
