@@ -1,0 +1,174 @@
+<section class="returns" dir="rtl">
+  <header class="returns__header">
+    <div>
+      <h1>المرتجعات</h1>
+      <p>مراجعة طلبات إرجاع المتاجر — الاعتماد يعيد التخزين ويعدّل الآجل عند الحاجة.</p>
+    </div>
+    <div class="filters">
+      <button type="button" [class.on]="filter() === 'PENDING'" (click)="setFilter('PENDING')">قيد المراجعة</button>
+      <button type="button" [class.on]="filter() === 'APPROVED'" (click)="setFilter('APPROVED')">مقبول</button>
+      <button type="button" [class.on]="filter() === 'REJECTED'" (click)="setFilter('REJECTED')">مرفوض</button>
+      <button type="button" [class.on]="filter() === ''" (click)="setFilter('')">الكل</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="returns__error" role="alert">{{ error() }}</p>
+  }
+
+  <div class="toolbar">
+    <label class="search">
+      <input
+        type="search"
+        [value]="searchDraft"
+        (input)="onSearchInput($any($event.target).value)"
+        placeholder="ابحث برقم الطلب أو اسم المتجر أو السبب…"
+        aria-label="بحث في المرتجعات"
+      />
+      @if (searchDraft) {
+        <button type="button" class="search__clear" (click)="clearSearch()">مسح</button>
+      }
+    </label>
+  </div>
+
+  <div class="returns__table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>الطلب</th>
+          <th>المتجر</th>
+          <th>الدفع</th>
+          <th>المبلغ</th>
+          <th>الحالة</th>
+          <th>التاريخ</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading() && rows().length === 0) {
+          <tr>
+            <td colspan="7" class="muted">جارٍ التحميل…</td>
+          </tr>
+        } @else if (rows().length === 0) {
+          <tr>
+            <td colspan="7" class="muted">
+              {{ searchQuery() ? 'لا توجد نتائج لهذا البحث.' : 'لا توجد مرتجعات في هذا التصفية.' }}
+            </td>
+          </tr>
+        } @else {
+          @for (row of rows(); track row.id) {
+            <tr>
+              <td>
+                <strong class="mono">{{ row.orderNumber }}</strong>
+                <div class="sub">{{ row.items.length }} صنف · {{ row.reason }}</div>
+              </td>
+              <td>{{ row.shopName }}</td>
+              <td>{{ paymentLabel(row.paymentMethod) }}</td>
+              <td class="mono">{{ row.refundAmount | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+              <td><span class="chip">{{ statusLabel(row.status) }}</span></td>
+              <td>{{ row.createdAt | date: 'mediumDate' }}</td>
+              <td class="actions">
+                <button type="button" class="btn btn-ghost" (click)="openDetail(row)">تفاصيل</button>
+                @if (row.status === 'PENDING') {
+                  <button
+                    type="button"
+                    class="btn btn-approve"
+                    (click)="approve(row)"
+                    [disabled]="busyId() === row.id"
+                  >
+                    اعتماد
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-reject"
+                    (click)="openReject(row)"
+                    [disabled]="busyId() === row.id"
+                  >
+                    رفض
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="20"
+    itemLabel="مرتجع"
+    ariaLabel="صفحات المرتجعات"
+    (pageChange)="goPage($event)"
+  />
+</section>
+
+@if (detail(); as row) {
+  <div class="modal-overlay" (click)="closeDetail()">
+    <div class="modal modal--wide" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <h2>مرتجع {{ row.orderNumber }}</h2>
+      <p>{{ row.shopName }} · {{ paymentLabel(row.paymentMethod) }} · {{ statusLabel(row.status) }}</p>
+      <ul class="detail-items">
+        @for (item of row.items; track item.productId) {
+          <li>
+            <span>{{ item.title }} × {{ item.quantity }}</span>
+            <strong>{{ item.lineTotal | currency: 'EGP':'symbol-narrow':'1.2-2' }}</strong>
+          </li>
+        }
+      </ul>
+      <p class="detail-reason"><strong>السبب:</strong> {{ row.reason }}</p>
+      @if (row.adminNote) {
+        <p class="detail-reason"><strong>ملاحظة الإدارة:</strong> {{ row.adminNote }}</p>
+      }
+      <div class="modal__actions">
+        <button type="button" class="btn btn-ghost" (click)="closeDetail()">إغلاق</button>
+        @if (row.status === 'PENDING') {
+          <button
+            type="button"
+            class="btn btn-approve"
+            (click)="approve(row)"
+            [disabled]="busyId() === row.id"
+          >
+            اعتماد
+          </button>
+          <button
+            type="button"
+            class="btn btn-reject"
+            (click)="openReject(row)"
+            [disabled]="busyId() === row.id"
+          >
+            رفض
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+@if (rejectTarget(); as row) {
+  <div class="modal-overlay" (click)="closeReject()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reject-return-title" (click)="$event.stopPropagation()">
+      <h2 id="reject-return-title">رفض مرتجع {{ row.orderNumber }}؟</h2>
+      <p>اكتب سبباً سيظهر لصاحب المتجر.</p>
+      <textarea
+        [(ngModel)]="rejectReason"
+        rows="4"
+        placeholder="مثال: المرتجع خارج فترة القبول"
+      ></textarea>
+      <div class="modal__actions">
+        <button type="button" class="btn btn-ghost" (click)="closeReject()">إلغاء</button>
+        <button
+          type="button"
+          class="btn btn-reject"
+          (click)="confirmReject()"
+          [disabled]="rejectReason.trim().length < 3 || busyId() === row.id"
+        >
+          تأكيد الرفض
+        </button>
+      </div>
+    </div>
+  </div>
+}

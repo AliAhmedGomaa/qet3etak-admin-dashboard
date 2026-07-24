@@ -96,6 +96,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'returns',
+        loadComponent: () =>
+          import('./features/returns/returns-admin').then((m) => m.ReturnsAdmin),
+      },
+      {
         path: 'broadcast',
         loadComponent: () =>
           import('./features/broadcast/broadcast').then((m) => m.BroadcastPage),
