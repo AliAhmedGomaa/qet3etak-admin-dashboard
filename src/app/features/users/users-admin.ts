@@ -16,18 +16,9 @@ import { AdminUsersService } from '../../core/users/admin-users.service';
 import {
   AdminRoleDefinition,
   AdminUser,
-  AdminUserRole,
-  AssignableAdminUserRole,
 } from '../../core/users/user.models';
 import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
 import { AdminPager } from '../../shared/admin-pager/admin-pager';
-
-const ROLE_LABELS: Record<AdminUserRole, string> = {
-  ADMIN: 'مدير النظام',
-  MANAGER: 'مدير عمليات',
-  STAFF: 'موظف',
-  BRANCH_MANAGER: 'مدير فرع',
-};
 
 @Component({
   selector: 'app-users-admin',
@@ -54,7 +45,7 @@ export class UsersAdmin implements OnInit {
   protected readonly searchQuery = signal('');
   protected searchDraft = '';
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
-  protected readonly roleFilter = signal<AdminUserRole | ''>('');
+  protected readonly roleFilter = signal<string>('');
   protected readonly deleteTarget = signal<AdminUser | null>(null);
   protected readonly deleting = signal(false);
 
@@ -63,7 +54,12 @@ export class UsersAdmin implements OnInit {
   );
 
   protected readonly assignableRoles = computed(() => {
-    const all = this.roles().filter((r) => r.role !== 'BRANCH_MANAGER');
+    const all = this.roles().filter(
+      (r) =>
+        r.role !== 'BRANCH_MANAGER' &&
+        r.role !== 'SHOP_OWNER' &&
+        r.canAccessAdmin !== false,
+    );
     if (this.canAssignAdmin()) return all;
     return all.filter((r) => r.role !== 'ADMIN');
   });
@@ -80,58 +76,38 @@ export class UsersAdmin implements OnInit {
     return bm ? [bm] : this.assignableRoles();
   });
 
+  protected readonly defaultRoleId = computed(() => {
+    const staff = this.assignableRoles().find((r) => r.role === 'STAFF');
+    return staff?.id ?? this.assignableRoles()[0]?.id ?? '';
+  });
+
   protected readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(2)]],
     phone: ['', [Validators.required, Validators.pattern(/^[0-9+\-\s]{8,20}$/)]],
     password: ['', [Validators.minLength(6)]],
-    role: ['STAFF' as AdminUserRole, Validators.required],
+    roleId: ['', Validators.required],
     isActive: [true],
   });
 
   ngOnInit(): void {
     this.api.listRoles().subscribe({
-      next: (res) => this.roles.set(res.items),
-      error: () => {
-        this.roles.set([
-          {
-            role: 'ADMIN',
-            labelAr: 'مدير النظام',
-            labelEn: 'Admin',
-            descriptionAr: 'صلاحيات كاملة',
-            canAccessAdmin: true,
-          },
-          {
-            role: 'MANAGER',
-            labelAr: 'مدير عمليات',
-            labelEn: 'Manager',
-            descriptionAr: 'وصول للوحة الإدارة',
-            canAccessAdmin: true,
-          },
-          {
-            role: 'STAFF',
-            labelAr: 'موظف',
-            labelEn: 'Staff',
-            descriptionAr: 'وصول للوحة الإدارة',
-            canAccessAdmin: true,
-          },
-          {
-            role: 'BRANCH_MANAGER',
-            labelAr: 'مدير فرع',
-            labelEn: 'Branch manager',
-            descriptionAr: 'يُعيَّن من صفحة الفروع',
-            canAccessAdmin: true,
-          },
-        ]);
+      next: (res) => this.roles.set(res.items ?? []),
+      error: (err) => {
+        this.error.set(
+          this.extractError(err, 'تعذر تحميل الأدوار — لا يمكن إنشاء مستخدم بدون أدوار'),
+        );
       },
     });
     this.load();
   }
 
-  protected roleLabel(role: AdminUserRole): string {
+  protected roleLabel(user: AdminUser): string {
+    if (user.roleId) {
+      const byId = this.roles().find((r) => r.id === user.roleId);
+      if (byId) return byId.labelAr;
+    }
     return (
-      this.roles().find((r) => r.role === role)?.labelAr ??
-      ROLE_LABELS[role] ??
-      role
+      this.roles().find((r) => r.role === user.role)?.labelAr ?? user.role
     );
   }
 
@@ -181,7 +157,7 @@ export class UsersAdmin implements OnInit {
   }
 
   protected onRoleFilter(value: string): void {
-    const next = (value || '') as AdminUserRole | '';
+    const next = value || '';
     if (next === this.roleFilter()) return;
     this.roleFilter.set(next);
     this.page.set(1);
@@ -196,12 +172,16 @@ export class UsersAdmin implements OnInit {
   }
 
   protected openCreate(): void {
+    if (!this.defaultRoleId()) {
+      this.error.set('لا توجد أدوار متاحة للتعيين. حدّث الصفحة أو تحقق من صلاحياتك.');
+      return;
+    }
     this.editingId.set(null);
     this.form.reset({
       fullName: '',
       phone: '',
       password: '',
-      role: 'STAFF',
+      roleId: this.defaultRoleId(),
       isActive: true,
     });
     this.form.controls.password.setValidators([
@@ -214,11 +194,15 @@ export class UsersAdmin implements OnInit {
 
   protected openEdit(user: AdminUser): void {
     this.editingId.set(user.id);
+    const roleId =
+      user.roleId ||
+      this.roles().find((r) => r.role === user.role)?.id ||
+      '';
     this.form.reset({
       fullName: user.fullName,
       phone: user.phone,
       password: '',
-      role: user.role,
+      roleId,
       isActive: user.isActive,
     });
     this.form.controls.password.setValidators([Validators.minLength(6)]);
@@ -236,7 +220,12 @@ export class UsersAdmin implements OnInit {
     if (this.form.invalid) return;
 
     const raw = this.form.getRawValue();
-    if (!this.canAssignAdmin() && raw.role === 'ADMIN') {
+    if (!raw.roleId) {
+      this.error.set('يجب اختيار دور');
+      return;
+    }
+    const selected = this.roles().find((r) => r.id === raw.roleId);
+    if (!this.canAssignAdmin() && selected?.role === 'ADMIN') {
       this.error.set('فقط مدير النظام يمكنه تعيين دور المدير');
       return;
     }
@@ -251,7 +240,7 @@ export class UsersAdmin implements OnInit {
           fullName: raw.fullName.trim(),
           phone: raw.phone.trim(),
           isActive: raw.isActive,
-          ...(isBranchManager ? {} : { role: raw.role as AssignableAdminUserRole }),
+          ...(isBranchManager ? {} : { roleId: raw.roleId }),
           ...(raw.password.trim()
             ? { password: raw.password.trim() }
             : {}),
@@ -260,7 +249,7 @@ export class UsersAdmin implements OnInit {
           fullName: raw.fullName.trim(),
           phone: raw.phone.trim(),
           password: raw.password.trim(),
-          role: raw.role as AssignableAdminUserRole,
+          roleId: raw.roleId,
           status: raw.isActive ? 'APPROVED' : 'SUSPENDED',
         });
 
@@ -272,9 +261,7 @@ export class UsersAdmin implements OnInit {
       },
       error: (err) => {
         this.saving.set(false);
-        this.error.set(
-          err?.error?.message ?? 'فشل حفظ المستخدم',
-        );
+        this.error.set(this.extractError(err, 'فشل حفظ المستخدم'));
       },
     });
   }
@@ -283,7 +270,7 @@ export class UsersAdmin implements OnInit {
     this.api.update(user.id, { isActive: !user.isActive }).subscribe({
       next: () => this.load(),
       error: (err) =>
-        this.error.set(err?.error?.message ?? 'فشل تحديث الحالة'),
+        this.error.set(this.extractError(err, 'فشل تحديث الحالة')),
     });
   }
 
@@ -308,8 +295,19 @@ export class UsersAdmin implements OnInit {
       },
       error: (err) => {
         this.deleting.set(false);
-        this.error.set(err?.error?.message ?? 'فشل الحذف');
+        this.error.set(this.extractError(err, 'فشل الحذف'));
       },
     });
+  }
+
+  private extractError(err: unknown, fallback: string): string {
+    const e = err as {
+      error?: { message?: string | string[] };
+      message?: string;
+    };
+    const msg = e?.error?.message ?? e?.message;
+    if (Array.isArray(msg)) return msg.join(' — ');
+    if (typeof msg === 'string' && msg.trim()) return msg;
+    return fallback;
   }
 }

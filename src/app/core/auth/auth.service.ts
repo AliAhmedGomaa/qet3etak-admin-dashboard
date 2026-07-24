@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthResponse, ShopUser, isAdminPanelRole } from './auth.models';
+import { AuthResponse, ShopUser, canAccessAdminPanel } from './auth.models';
 
 const TOKEN_KEY = 'qet3etak.admin.token';
 const USER_KEY = 'qet3etak.admin.user';
@@ -30,7 +30,7 @@ export class AuthService {
       .post<AuthResponse>(`${environment.apiUrl}/auth/login`, { phone, password })
       .pipe(
         map((res) => {
-          if (!isAdminPanelRole(res.user.role)) {
+          if (!canAccessAdminPanel(res.user)) {
             throw { error: { message: 'Admin access only' } };
           }
           return res;

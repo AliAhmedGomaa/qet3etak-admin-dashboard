@@ -1,4 +1,4 @@
-export type AdminUserRole = 'ADMIN' | 'MANAGER' | 'STAFF' | 'BRANCH_MANAGER';
+export type AdminUserRole = string;
 
 export type AdminUserStatus = 'APPROVED' | 'SUSPENDED';
 
@@ -7,6 +7,8 @@ export interface AdminUser {
   fullName: string;
   phone: string;
   role: AdminUserRole;
+  /** Present when Roles entity is wired. */
+  roleId?: string | null;
   status: AdminUserStatus;
   isActive: boolean;
   branchId?: string | null;
@@ -15,21 +17,28 @@ export interface AdminUser {
 }
 
 export interface AdminRoleDefinition {
+  /** Role document id when loaded from Role collection. */
+  id?: string;
   role: AdminUserRole;
+  code?: string;
+  name?: string;
   labelAr: string;
   labelEn: string;
   descriptionAr: string;
   canAccessAdmin: boolean;
+  adminPanel?: boolean;
+  isActive?: boolean;
+  isSystem?: boolean;
 }
-
-/** Roles creatable from the Users page (BRANCH_MANAGER is assigned via Branches). */
-export type AssignableAdminUserRole = Exclude<AdminUserRole, 'BRANCH_MANAGER'>;
 
 export interface CreateAdminUserPayload {
   fullName: string;
   phone: string;
   password: string;
-  role: AssignableAdminUserRole;
+  /** Preferred when Role entities exist. */
+  roleId: string;
+  /** Fallback role code when roleId is unavailable. */
+  role?: string;
   status?: AdminUserStatus;
 }
 
@@ -37,7 +46,8 @@ export interface UpdateAdminUserPayload {
   fullName?: string;
   phone?: string;
   password?: string;
-  role?: AssignableAdminUserRole;
+  roleId?: string;
+  role?: string;
   status?: AdminUserStatus;
   isActive?: boolean;
 }

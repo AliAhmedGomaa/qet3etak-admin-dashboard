@@ -1,0 +1,188 @@
+<section class="roles" dir="rtl">
+  <header class="roles__header">
+    <div>
+      <h1>الأدوار</h1>
+      <p>إدارة أدوار النظام والأدوار المخصصة وصلاحية دخول لوحة الإدارة.</p>
+    </div>
+    <div class="roles__actions">
+      <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
+      <button type="button" class="btn btn-primary" (click)="openCreate()">إضافة دور</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  <div class="toolbar">
+    <label class="search">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M8.5 14.5a6 6 0 100-12 6 6 0 000 12zM17 17l-3.2-3.2"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <input
+        type="search"
+        [value]="searchDraft"
+        (input)="onSearchInput($any($event.target).value)"
+        placeholder="ابحث بالاسم أو الرمز…"
+        aria-label="بحث في الأدوار"
+      />
+      @if (searchDraft) {
+        <button type="button" class="search__clear" (click)="clearSearch()" aria-label="مسح البحث">
+          مسح
+        </button>
+      }
+    </label>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>الرمز</th>
+          <th>لوحة الإدارة</th>
+          <th>النوع</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="6" class="muted">جارٍ التحميل…</td></tr>
+        } @else if (roles().length === 0) {
+          <tr>
+            <td colspan="6" class="muted">
+              {{ searchQuery() ? 'لا توجد نتائج لهذا البحث.' : 'لا توجد أدوار بعد.' }}
+            </td>
+          </tr>
+        } @else {
+          @for (role of roles(); track role.id) {
+            <tr>
+              <td>
+                <strong>{{ role.name }}</strong>
+                @if (role.description) {
+                  <div class="desc">{{ role.description }}</div>
+                }
+              </td>
+              <td><code class="code">{{ role.code }}</code></td>
+              <td>
+                <span class="chip" [class.chip--off]="!role.adminPanel">
+                  {{ role.adminPanel ? 'نعم' : 'لا' }}
+                </span>
+              </td>
+              <td>
+                <span class="tag" [class.tag--system]="role.isSystem">
+                  {{ role.isSystem ? 'نظام' : 'مخصص' }}
+                </span>
+              </td>
+              <td>
+                <span class="chip" [class.chip--off]="!role.isActive">
+                  {{ role.isActive ? 'نشط' : 'موقوف' }}
+                </span>
+              </td>
+              <td class="row-actions">
+                <button type="button" class="btn btn-ghost" (click)="openEdit(role)">تعديل</button>
+                <button
+                  type="button"
+                  class="btn btn-danger"
+                  [disabled]="role.isSystem"
+                  (click)="remove(role)"
+                >
+                  حذف
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="20"
+    itemLabel="دور"
+    ariaLabel="صفحات الأدوار"
+    (pageChange)="goPage($event)"
+  />
+</section>
+
+@if (editorOpen()) {
+  <div class="overlay" (click)="closeEditor()">
+    <div class="drawer" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header>
+        <h2>{{ editingId() ? 'تعديل دور' : 'دور جديد' }}</h2>
+        <button type="button" class="btn btn-ghost" (click)="closeEditor()">إغلاق</button>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <label>
+          الاسم
+          <input formControlName="name" placeholder="مثال: عمليات" />
+        </label>
+
+        <label>
+          الرمز (Code)
+          <input
+            formControlName="code"
+            placeholder="OPS"
+            dir="ltr"
+            [attr.readonly]="editingSystem() ? true : null"
+          />
+          @if (editingSystem()) {
+            <span class="hint">لا يمكن تغيير رمز أدوار النظام.</span>
+          } @else {
+            <span class="hint">أحرف إنجليزية كبيرة وأرقام وشرطة سفلية فقط.</span>
+          }
+        </label>
+
+        <label>
+          الوصف
+          <textarea formControlName="description" rows="3" placeholder="وصف مختصر للدور"></textarea>
+        </label>
+
+        <label>
+          الصلاحيات (مفصولة بفاصلة)
+          <input formControlName="permissionsText" placeholder="admin.panel" dir="ltr" />
+        </label>
+
+        <label class="active-toggle">
+          <input type="checkbox" formControlName="adminPanel" />
+          <span>يسمح بدخول لوحة الإدارة</span>
+        </label>
+
+        @if (!editingSystem()) {
+          <label class="active-toggle">
+            <input type="checkbox" formControlName="isActive" />
+            <span>دور نشط</span>
+          </label>
+        }
+
+        <footer>
+          <button type="button" class="btn btn-ghost" (click)="closeEditor()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'جارٍ الحفظ…' : 'حفظ' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="!!deleteTarget()"
+  title="تأكيد الحذف"
+  [message]="deleteTarget() ? 'هل تريد حذف الدور «' + deleteTarget()!.name + '»؟' : ''"
+  confirmLabel="حذف الدور"
+  [busy]="deleting()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()"
+/>

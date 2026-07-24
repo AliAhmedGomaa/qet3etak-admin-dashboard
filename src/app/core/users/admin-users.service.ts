@@ -1,8 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { PageParams, Paginated } from '../pagination';
+import { AdminRole } from '../roles/role.models';
+import { RolesAdminService } from '../roles/roles-admin.service';
 import {
   AdminRoleDefinition,
   AdminUser,
@@ -13,14 +15,15 @@ import {
 
 export type AdminUsersListParams = PageParams & {
   role?: AdminUserRole;
+  roleId?: string;
   status?: string;
 };
 
 @Injectable({ providedIn: 'root' })
 export class AdminUsersService {
   private readonly http = inject(HttpClient);
+  private readonly rolesApi = inject(RolesAdminService);
   private readonly base = `${environment.apiUrl}/admin/users`;
-  private readonly rolesUrl = `${environment.apiUrl}/admin/roles`;
 
   list(params: AdminUsersListParams = {}): Observable<Paginated<AdminUser>> {
     let httpParams = new HttpParams();
@@ -31,14 +34,22 @@ export class AdminUsersService {
     const q = params.q?.trim();
     if (q) httpParams = httpParams.set('q', q);
     if (params.role) httpParams = httpParams.set('role', params.role);
+    if (params.roleId) httpParams = httpParams.set('roleId', params.roleId);
     if (params.status) httpParams = httpParams.set('status', params.status);
     return this.http.get<Paginated<AdminUser>>(this.base, {
       params: httpParams,
     });
   }
 
+  /** Panel roles for staff assignment dropdowns (back-compat shape). */
   listRoles(): Observable<{ items: AdminRoleDefinition[] }> {
-    return this.http.get<{ items: AdminRoleDefinition[] }>(this.rolesUrl);
+    return this.rolesApi
+      .list({ limit: 100, includeInactive: false, adminPanelOnly: true })
+      .pipe(
+        map((res) => ({
+          items: res.items.map((r) => this.toDefinition(r)),
+        })),
+      );
   }
 
   get(id: string): Observable<AdminUser> {
@@ -55,5 +66,20 @@ export class AdminUsersService {
 
   remove(id: string): Observable<{ ok: boolean }> {
     return this.http.delete<{ ok: boolean }>(`${this.base}/${id}`);
+  }
+
+  private toDefinition(r: AdminRole): AdminRoleDefinition {
+    return {
+      id: r.id,
+      role: r.code,
+      code: r.code,
+      name: r.name,
+      labelAr: r.name,
+      labelEn: r.code,
+      descriptionAr: r.description ?? '',
+      canAccessAdmin: r.adminPanel,
+      adminPanel: r.adminPanel,
+      isSystem: r.isSystem,
+    };
   }
 }

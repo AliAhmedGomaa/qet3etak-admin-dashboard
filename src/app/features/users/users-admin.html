@@ -1,8 +1,8 @@
 <section class="users" dir="rtl">
   <header class="users__header">
     <div>
-      <h1>المستخدمون والأدوار</h1>
-      <p>إنشاء وإدارة مستخدمي لوحة الإدارة وتعيين أدوارهم.</p>
+      <h1>المستخدمون</h1>
+      <p>إنشاء وإدارة مستخدمي لوحة الإدارة وتعيين أدوارهم من كيان الأدوار.</p>
     </div>
     <div class="users__actions">
       <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
@@ -12,18 +12,6 @@
 
   @if (error()) {
     <p class="err">{{ error() }}</p>
-  }
-
-  @if (roles().length) {
-    <div class="roles-strip" aria-label="تعريفات الأدوار">
-      @for (role of roles(); track role.role) {
-        <article class="role-card">
-          <strong>{{ role.labelAr }}</strong>
-          <span class="role-card__code">{{ role.role }}</span>
-          <p>{{ role.descriptionAr }}</p>
-        </article>
-      }
-    </div>
   }
 
   <div class="toolbar">
@@ -59,7 +47,7 @@
         aria-label="تصفية حسب الدور"
       >
         <option value="">الكل</option>
-        @for (role of roles(); track role.role) {
+        @for (role of roles(); track role.id || role.role) {
           <option [value]="role.role">{{ role.labelAr }}</option>
         }
       </select>
@@ -93,7 +81,7 @@
               <td dir="ltr">{{ user.phone }}</td>
               <td>
                 <span class="role-pill" [attr.data-role]="user.role">
-                  {{ roleLabel(user.role) }}
+                  {{ roleLabel(user) }}
                 </span>
               </td>
               <td>
@@ -160,9 +148,9 @@
 
         <label>
           الدور
-          <select formControlName="role" [disabled]="editingBranchManager()">
-            @for (role of formRoleOptions(); track role.role) {
-              <option [value]="role.role">{{ role.labelAr }} ({{ role.role }})</option>
+          <select formControlName="roleId" [disabled]="editingBranchManager()">
+            @for (role of formRoleOptions(); track role.id || role.role) {
+              <option [value]="role.id">{{ role.labelAr }} ({{ role.role }})</option>
             }
           </select>
           @if (editingBranchManager()) {

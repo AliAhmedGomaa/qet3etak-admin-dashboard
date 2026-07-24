@@ -9,6 +9,7 @@ import {
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
+import { effectiveNavRole } from '../core/auth/auth.models';
 import { ChatService } from '../core/chat/chat.service';
 import { ReturnsAdminService } from '../core/returns/returns-admin.service';
 import { PushNotificationService } from '../core/push/push-notification.service';
@@ -591,7 +592,13 @@ export class AdminShell implements OnInit {
       path: '/users',
       label: 'المستخدمون',
       icon: 'M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.108-2.008-.26-2.642m0 2.645a14.814 14.814 0 01-.26 2.642m0-2.645a14.927 14.927 0 00-4.487-2.97m4.487 2.97c-.318.052-.642.09-.972.115a14.83 14.83 0 01-4.487-2.97M3.375 19.5h.008v.008H3.375V19.5zM3.75 12a8.25 8.25 0 1116.5 0 8.25 8.25 0 01-16.5 0z',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
+      roles: ['ADMIN'],
+    },
+    {
+      path: '/roles',
+      label: 'الأدوار',
+      icon: 'M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z',
+      roles: ['ADMIN'],
     },
     {
       path: '/branches',
@@ -680,7 +687,7 @@ export class AdminShell implements OnInit {
   ];
 
   protected readonly visibleNavItems = computed(() => {
-    const role = this.auth.user()?.role;
+    const role = effectiveNavRole(this.auth.user());
     if (!role) return [];
     if (role === 'BRANCH_MANAGER') {
       return this.allNavItems.filter((item) =>
@@ -688,7 +695,9 @@ export class AdminShell implements OnInit {
       );
     }
     return this.allNavItems.filter(
-      (item) => !item.roles || item.roles.includes(role as 'ADMIN' | 'MANAGER' | 'STAFF' | 'BRANCH_MANAGER'),
+      (item) =>
+        !item.roles ||
+        item.roles.includes(role as 'ADMIN' | 'MANAGER' | 'STAFF' | 'BRANCH_MANAGER'),
     );
   });
 }
