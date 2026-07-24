@@ -1,11 +1,22 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ShopUser } from '../../core/auth/auth.models';
+import { ShopsAdminService } from '../../core/shops/shops-admin.service';
 import { AdminSpecialRequestsApi } from '../../core/special-requests/admin-special-requests.api';
+
+type BroadcastResult = {
+  targeted: number;
+  sent: number;
+  failed: number;
+  enabled: boolean;
+};
 
 @Component({
   selector: 'app-broadcast',
@@ -15,7 +26,8 @@ import { AdminSpecialRequestsApi } from '../../core/special-requests/admin-speci
       <header>
         <h1>أداة البث الجماعي</h1>
         <p>
-          أرسل إشعارات ويب دفعة واحدة لجميع أصحاب المتاجر المسجّلين — مثال: وصول شحنة شاشات أصلية.
+          أرسل إشعارات ويب لأصحاب المتاجر — اختر متاجر محددة، أو اترك التحديد فارغًا
+          للإرسال للجميع.
         </p>
       </header>
 
@@ -66,8 +78,68 @@ import { AdminSpecialRequestsApi } from '../../core/special-requests/admin-speci
             />
           </label>
 
-          @if (result() !== null) {
-            <p class="ok">أُرسل بنجاح إلى {{ result() }} اشتراك/اشتراكات.</p>
+          <fieldset class="recipients">
+            <legend>المستلمون</legend>
+            <p class="scope" [class.scope--all]="selectedCount() === 0">
+              @if (selectedCount() === 0) {
+                إرسال للجميع — لم يُحدد أي متجر
+              } @else {
+                سيتم الإرسال إلى {{ selectedCount() }} متجر محدد
+              }
+            </p>
+
+            <div class="recipients__bar">
+              <input
+                class="search"
+                type="search"
+                [ngModel]="shopQuery()"
+                (ngModelChange)="onShopQuery($event)"
+                name="shopQuery"
+                placeholder="ابحث بالاسم أو الهاتف…"
+                autocomplete="off"
+              />
+              @if (selectedCount() > 0) {
+                <button type="button" class="linkish" (click)="clearSelection()">
+                  مسح التحديد
+                </button>
+              }
+            </div>
+
+            @if (shopsLoading()) {
+              <p class="muted">جارٍ تحميل المتاجر…</p>
+            } @else if (shopsError()) {
+              <p class="err">{{ shopsError() }}</p>
+            } @else if (filteredShops().length === 0) {
+              <p class="muted">لا توجد متاجر مطابقة.</p>
+            } @else {
+              <ul class="shop-list" role="listbox" aria-multiselectable="true">
+                @for (shop of filteredShops(); track shop.id) {
+                  <li>
+                    <label class="shop-row">
+                      <input
+                        type="checkbox"
+                        [checked]="isSelected(shop.id)"
+                        (change)="toggleShop(shop.id)"
+                      />
+                      <span class="shop-row__text">
+                        <strong>{{ shop.shopName || shop.fullName || 'متجر' }}</strong>
+                        <small>{{ shop.phone }}</small>
+                      </span>
+                    </label>
+                  </li>
+                }
+              </ul>
+            }
+          </fieldset>
+
+          @if (result(); as res) {
+            <p class="ok">
+              أُرسل إلى {{ res.sent }} اشتراك (مستهدفون: {{ res.targeted }} متجر
+              @if (res.failed > 0) {
+                ، فشل: {{ res.failed }}
+              }
+              ).
+            </p>
           }
           @if (error()) {
             <p class="err">{{ error() }}</p>
@@ -77,7 +149,13 @@ import { AdminSpecialRequestsApi } from '../../core/special-requests/admin-speci
             type="submit"
             [disabled]="busy() || title().trim().length < 3 || body().trim().length < 3"
           >
-            {{ busy() ? 'جارٍ الإرسال…' : 'إرسال البث لجميع المتاجر' }}
+            @if (busy()) {
+              جارٍ الإرسال…
+            } @else if (selectedCount() === 0) {
+              إرسال البث للجميع
+            } @else {
+              إرسال البث للمتاجر المحددة ({{ selectedCount() }})
+            }
           </button>
         </form>
 
@@ -131,6 +209,81 @@ import { AdminSpecialRequestsApi } from '../../core/special-requests/admin-speci
       cursor: pointer; color: #334155;
     }
     .chip:hover { border-color: #10b880; color: #0d9a6a; }
+    .recipients {
+      margin: 0;
+      padding: 0.85rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.85rem;
+      display: grid;
+      gap: 0.65rem;
+    }
+    .recipients legend {
+      padding: 0 0.35rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #334155;
+    }
+    .scope {
+      margin: 0;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #0d9a6a;
+      background: #ecfdf6;
+      padding: 0.55rem 0.7rem;
+      border-radius: 0.55rem;
+    }
+    .scope--all {
+      color: #1d4ed8;
+      background: #eff6ff;
+    }
+    .recipients__bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .search { flex: 1 1 12rem; min-width: 0; }
+    .linkish {
+      border: 0;
+      background: transparent;
+      color: #0d9a6a;
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0.25rem 0.35rem;
+    }
+    .shop-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 14rem;
+      overflow: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.65rem;
+    }
+    .shop-list li + li { border-top: 1px solid #f1f5f9; }
+    .shop-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.65rem;
+      align-items: start;
+      padding: 0.55rem 0.7rem;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .shop-row:hover { background: #f8fafc; }
+    .shop-row input { margin-top: 0.2rem; accent-color: #10b880; }
+    .shop-row__text { display: grid; gap: 0.1rem; min-width: 0; }
+    .shop-row__text strong {
+      font-size: 0.84rem;
+      color: #0f172a;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .shop-row__text small { color: #64748b; font-size: 0.75rem; }
+    .muted { margin: 0; color: #94a3b8; font-size: 0.8rem; }
     button[type='submit'] {
       min-height: 3rem; border: 0; border-radius: 0.75rem;
       background: #10b880; color: #fff; font: inherit; font-weight: 800; cursor: pointer;
@@ -164,15 +317,58 @@ import { AdminSpecialRequestsApi } from '../../core/special-requests/admin-speci
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class BroadcastPage {
+export class BroadcastPage implements OnInit {
   private readonly api = inject(AdminSpecialRequestsApi);
+  private readonly shopsApi = inject(ShopsAdminService);
 
   protected readonly title = signal('');
   protected readonly body = signal('');
   protected readonly url = signal('/catalog');
   protected readonly busy = signal(false);
-  protected readonly result = signal<number | null>(null);
+  protected readonly result = signal<BroadcastResult | null>(null);
   protected readonly error = signal<string | null>(null);
+
+  protected readonly shops = signal<ShopUser[]>([]);
+  protected readonly shopsLoading = signal(false);
+  protected readonly shopsError = signal<string | null>(null);
+  protected readonly shopQuery = signal('');
+  protected readonly selectedIds = signal<ReadonlySet<string>>(new Set());
+
+  protected readonly selectedCount = computed(() => this.selectedIds().size);
+
+  protected readonly filteredShops = computed(() => {
+    const q = this.shopQuery().trim().toLowerCase();
+    const items = this.shops();
+    if (!q) return items;
+    return items.filter((s) => {
+      const name = (s.shopName || s.fullName || '').toLowerCase();
+      const phone = (s.phone || '').toLowerCase();
+      return name.includes(q) || phone.includes(q);
+    });
+  });
+
+  ngOnInit(): void {
+    this.loadShops();
+  }
+
+  protected onShopQuery(value: string): void {
+    this.shopQuery.set(value);
+  }
+
+  protected isSelected(id: string): boolean {
+    return this.selectedIds().has(id);
+  }
+
+  protected toggleShop(id: string): void {
+    const next = new Set(this.selectedIds());
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    this.selectedIds.set(next);
+  }
+
+  protected clearSelection(): void {
+    this.selectedIds.set(new Set());
+  }
 
   protected appendSnippet(text: string): void {
     const current = this.body().trim();
@@ -183,21 +379,54 @@ export class BroadcastPage {
     this.busy.set(true);
     this.result.set(null);
     this.error.set(null);
+    const shopIds = [...this.selectedIds()];
     this.api
       .broadcast({
         title: this.title().trim(),
         body: this.body().trim(),
         url: this.url().trim() || '/home',
+        ...(shopIds.length ? { shopIds } : {}),
       })
       .subscribe({
         next: (res) => {
           this.busy.set(false);
-          this.result.set(res.sent);
+          this.result.set(res);
         },
-        error: () => {
+        error: (err) => {
           this.busy.set(false);
+          const invalid = err?.error?.invalidShopIds as string[] | undefined;
+          if (invalid?.length) {
+            this.error.set(
+              'بعض المتاجر المحددة غير صالحة أو غير معتمدة — راجع التحديد وأعد المحاولة.',
+            );
+            return;
+          }
           this.error.set('فشل البث — تأكد من إعداد مفاتيح VAPID');
         },
       });
+  }
+
+  private loadShops(): void {
+    this.shopsLoading.set(true);
+    this.shopsError.set(null);
+    this.loadShopsPage(1, []);
+  }
+
+  private loadShopsPage(page: number, acc: ShopUser[]): void {
+    this.shopsApi.list({ status: 'APPROVED', page, limit: 100 }).subscribe({
+      next: (res) => {
+        const merged = acc.concat(res.items);
+        if (res.page < res.totalPages) {
+          this.loadShopsPage(res.page + 1, merged);
+          return;
+        }
+        this.shops.set(merged);
+        this.shopsLoading.set(false);
+      },
+      error: () => {
+        this.shopsLoading.set(false);
+        this.shopsError.set('تعذر تحميل قائمة المتاجر المعتمدة');
+      },
+    });
   }
 }

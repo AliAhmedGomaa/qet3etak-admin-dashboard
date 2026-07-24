@@ -51,7 +51,7 @@ export class ShopApprovals implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     this.shopsApi
-      .list('PENDING_VERIFICATION', { page: this.page(), limit: 20 })
+      .list({ status: 'PENDING_VERIFICATION', page: this.page(), limit: 20 })
       .subscribe({
         next: (res) => {
           this.shops.set(res.items);

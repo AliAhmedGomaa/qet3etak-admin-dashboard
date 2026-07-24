@@ -1,0 +1,101 @@
+<section class="invoices" dir="rtl">
+  <header class="invoices__header">
+    <div>
+      <h1>الفواتير</h1>
+      <p>فواتير الطلبات الصادرة تلقائياً عند إتمام الدفع / الطلب.</p>
+    </div>
+    <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  <div class="toolbar">
+    <label class="search">
+      <input
+        type="search"
+        [value]="searchDraft"
+        (input)="onSearchInput($any($event.target).value)"
+        placeholder="ابحث برقم الفاتورة أو الطلب أو المتجر…"
+        aria-label="بحث في الفواتير"
+      />
+      @if (searchDraft) {
+        <button type="button" class="search__clear" (click)="clearSearch()">مسح</button>
+      }
+    </label>
+    <div class="filters" role="group" aria-label="تصفية الحالة">
+      <button type="button" class="chip" [class.on]="statusFilter() === ''" (click)="setStatus('')">الكل</button>
+      <button type="button" class="chip" [class.on]="statusFilter() === 'ISSUED'" (click)="setStatus('ISSUED')">صادرة</button>
+      <button type="button" class="chip" [class.on]="statusFilter() === 'VOID'" (click)="setStatus('VOID')">ملغاة</button>
+      <button type="button" class="chip" [class.on]="statusFilter() === 'PAID'" (click)="setStatus('PAID')">مدفوعة</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>الفاتورة</th>
+          <th>الطلب</th>
+          <th>المتجر</th>
+          <th>الدفع</th>
+          <th>الإجمالي</th>
+          <th>التاريخ</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="8" class="muted">جارٍ التحميل…</td></tr>
+        } @else if (invoices().length === 0) {
+          <tr>
+            <td colspan="8" class="muted">
+              {{ searchQuery() || statusFilter() ? 'لا توجد نتائج.' : 'لا توجد فواتير بعد.' }}
+            </td>
+          </tr>
+        } @else {
+          @for (inv of invoices(); track inv.id) {
+            <tr [class.is-void]="inv.status === 'VOID'">
+              <td>
+                <a [routerLink]="['/invoices', inv.id]"><strong>{{ inv.invoiceNumber }}</strong></a>
+              </td>
+              <td>{{ inv.orderNumber }}</td>
+              <td>{{ inv.shopName }}</td>
+              <td>{{ paymentLabel(inv.paymentMethod) }}</td>
+              <td>{{ inv.total | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+              <td>{{ inv.issuedAt | date: 'mediumDate' }}</td>
+              <td><span class="status" [attr.data-status]="inv.status">{{ statusLabel(inv.status) }}</span></td>
+              <td class="actions">
+                <a class="link" [routerLink]="['/invoices', inv.id]">عرض</a>
+                @if (inv.status !== 'VOID') {
+                  <button type="button" class="link danger" (click)="askVoid(inv)">إلغاء</button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    itemLabel="فاتورة"
+    ariaLabel="صفحات الفواتير"
+    (pageChange)="goPage($event)"
+  />
+
+  <app-confirm-dialog
+    [open]="!!voidTarget()"
+    title="إلغاء الفاتورة؟"
+    [message]="voidTarget() ? 'سيتم وسم الفاتورة ' + voidTarget()!.invoiceNumber + ' كملغاة.' : ''"
+    confirmLabel="إلغاء الفاتورة"
+    [busy]="voiding()"
+    (confirmed)="confirmVoid()"
+    (cancelled)="voidTarget.set(null)"
+  />
+</section>

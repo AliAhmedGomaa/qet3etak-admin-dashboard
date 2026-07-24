@@ -60,11 +60,18 @@ export class AdminSpecialRequestsApi {
     );
   }
 
-  broadcast(body: { title: string; body: string; url?: string }) {
-    return this.http.post<{ sent: number }>(
-      `${this.api}/admin/push/broadcast`,
-      body,
-    );
+  broadcast(body: {
+    title: string;
+    body: string;
+    url?: string;
+    shopIds?: string[];
+  }) {
+    return this.http.post<{
+      targeted: number;
+      sent: number;
+      failed: number;
+      enabled: boolean;
+    }>(`${this.api}/admin/push/broadcast`, body);
   }
 
   photoUrl(path: string): string {

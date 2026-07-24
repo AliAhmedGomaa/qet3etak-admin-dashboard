@@ -22,6 +22,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'shops',
+        loadComponent: () =>
+          import('./features/shops/shops-admin').then((m) => m.ShopsAdmin),
+      },
+      {
         path: 'inventory',
         loadComponent: () =>
           import('./features/inventory/inventory').then((m) => m.Inventory),
@@ -36,6 +41,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/categories/categories-admin').then(
             (m) => m.CategoriesAdmin,
+          ),
+      },
+      {
+        path: 'data-import',
+        loadComponent: () =>
+          import('./features/data-import/data-import').then(
+            (m) => m.DataImportPage,
           ),
       },
       {
@@ -55,6 +67,18 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/orders-board/orders-board').then(
             (m) => m.OrdersBoard,
+          ),
+      },
+      {
+        path: 'invoices',
+        loadComponent: () =>
+          import('./features/invoices/invoices').then((m) => m.InvoicesAdminPage),
+      },
+      {
+        path: 'invoices/:id',
+        loadComponent: () =>
+          import('./features/invoices/invoice-detail').then(
+            (m) => m.InvoiceDetailAdmin,
           ),
       },
       {

@@ -1,0 +1,167 @@
+<section class="import" dir="rtl">
+  <header class="import__header">
+    <div>
+      <h1>استيراد بيانات</h1>
+      <p>
+        ارفع ملف Excel أو JSON لنقل المخزون من نظامكم الحالي. الماركات والفئات والمنتجات تُحدَّث إن وُجدت
+        أو تُنشأ إن لم توجد — بدون تكرار لنفس العنصر المنطقي.
+      </p>
+    </div>
+    <div class="import__actions">
+      <button type="button" class="btn btn-ghost" (click)="downloadJson()">نموذج JSON</button>
+      <button type="button" class="btn btn-ghost" (click)="downloadExcel()">نموذج Excel</button>
+    </div>
+  </header>
+
+  <div class="callout">
+    <strong>قواعد الدمج (Upsert)</strong>
+    <ul>
+      <li><b>ماركة / فئة:</b> مطابقة بالاسم (بدون تمييز حالة الأحرف) → موجود = استخدام، غير موجود = إنشاء.</li>
+      <li><b>منتج:</b> مطابقة بـ SKU إن وُجد، وإلا بـ (ماركة + موديل + فئة + قطعة + درجة الجودة) → موجود = تحديث، غير موجود = إنشاء.</li>
+      <li>سعر التكلفة (<code>costPrice</code>) لا يُستورد — يُحدَّث عبر استلام أوامر الشراء.</li>
+    </ul>
+  </div>
+
+  <div class="upload card">
+    <label class="drop">
+      <input
+        type="file"
+        accept=".xlsx,.json,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        (change)="onFileChange($event)"
+      />
+      <span class="drop__title">اختر ملف .xlsx أو .json</span>
+      <span class="drop__hint">الحد الأقصى 10 ميغابايت · معاينة تلقائية بعد الاختيار</span>
+    </label>
+
+    @if (selectedFile(); as file) {
+      <div class="file-row">
+        <div>
+          <strong>{{ file.name }}</strong>
+          <small>{{ (file.size / 1024).toFixed(1) }} ك.ب</small>
+        </div>
+        <div class="file-row__actions">
+          <button type="button" class="btn btn-ghost" [disabled]="loading()" (click)="runPreview()">
+            {{ loading() ? 'جارٍ المعاينة…' : 'إعادة المعاينة' }}
+          </button>
+          <button type="button" class="btn btn-ghost" (click)="clearFile()">إزالة</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  @if (activeResult(); as result) {
+    <div class="summary card">
+      <div class="summary__head">
+        <h2>{{ result.dryRun ? 'معاينة الاستيراد' : 'نتيجة الاستيراد' }}</h2>
+        @if (result.dryRun) {
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="committing() || !selectedFile()"
+            (click)="runCommit()"
+          >
+            {{ committing() ? 'جارٍ التنفيذ…' : 'تأكيد الاستيراد' }}
+          </button>
+        } @else {
+          <span class="badge badge--ok">تم التطبيق</span>
+        }
+      </div>
+
+      <div class="stats">
+        @for (block of [
+          { key: 'brands', label: 'الماركات', s: result.summary.brands },
+          { key: 'categories', label: 'الفئات', s: result.summary.categories },
+          { key: 'products', label: 'المنتجات', s: result.summary.products }
+        ]; track block.key) {
+          <article class="stat">
+            <h3>{{ block.label }}</h3>
+            <p class="stat__total">{{ summaryTotal(block.s) }} صف</p>
+            <ul>
+              <li><span>إنشاء</span><em>{{ block.s.create }}</em></li>
+              <li><span>تحديث</span><em>{{ block.s.update }}</em></li>
+              <li><span>استخدام</span><em>{{ block.s.reuse }}</em></li>
+              <li><span>أخطاء</span><em class="bad">{{ block.s.error }}</em></li>
+            </ul>
+          </article>
+        }
+      </div>
+
+      @if (result.errors.length) {
+        <div class="errors">
+          <h3>أخطاء الصفوف ({{ result.errors.length }})</h3>
+          <ul>
+            @for (e of result.errors.slice(0, 20); track $index) {
+              <li>
+                <span class="pill">{{ entityLabel(e.entity) }} #{{ e.row }}</span>
+                {{ e.message }}
+              </li>
+            }
+          </ul>
+          @if (result.errors.length > 20) {
+            <p class="muted">و {{ result.errors.length - 20 }} أخطاء إضافية…</p>
+          }
+        </div>
+      }
+
+      <div class="rows-toolbar">
+        <h3>تفاصيل الصفوف</h3>
+        <div class="filters" role="group" aria-label="تصفية الكيان">
+          @for (f of [
+            { id: 'all', label: 'الكل' },
+            { id: 'brand', label: 'ماركات' },
+            { id: 'category', label: 'فئات' },
+            { id: 'product', label: 'منتجات' }
+          ]; track f.id) {
+            <button
+              type="button"
+              class="chip"
+              [class.chip--on]="entityFilter() === f.id"
+              (click)="entityFilter.set($any(f.id))"
+            >
+              {{ f.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الكيان</th>
+              <th>الصف</th>
+              <th>الإجراء</th>
+              <th>المفتاح</th>
+              <th>الرسالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (filteredRows().length === 0) {
+              <tr><td colspan="5" class="muted">لا توجد صفوف لهذا التصفية.</td></tr>
+            } @else {
+              @for (row of filteredRows(); track $index) {
+                <tr [class.row-error]="row.action === 'error'">
+                  <td>{{ entityLabel(row.entity) }}</td>
+                  <td>{{ row.row }}</td>
+                  <td>
+                    <span class="action" [attr.data-action]="row.action">
+                      {{ actionLabel(row.action) }}
+                    </span>
+                  </td>
+                  <td class="key">{{ row.key || '—' }}</td>
+                  <td>{{ row.message || '—' }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  } @else if (loading()) {
+    <p class="muted center">جارٍ تحليل الملف…</p>
+  }
+</section>

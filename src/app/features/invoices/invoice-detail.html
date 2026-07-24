@@ -1,0 +1,117 @@
+<section class="inv-page" dir="rtl">
+  <div class="no-print toolbar">
+    <a routerLink="/invoices">← الفواتير</a>
+    <div class="toolbar__actions">
+      @if (invoice(); as inv) {
+        @if (inv.status !== 'VOID') {
+          <button
+            type="button"
+            class="btn danger"
+            [disabled]="voiding()"
+            (click)="voidInvoice()"
+          >
+            {{ voiding() ? 'جارٍ الإلغاء…' : 'إلغاء الفاتورة' }}
+          </button>
+        }
+        <button type="button" class="btn primary" (click)="print()">طباعة</button>
+      }
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="muted">{{ error() }}</p>
+  } @else if (invoice(); as inv) {
+    <article class="sheet" [class.void]="inv.status === 'VOID'">
+      <header class="sheet__head">
+        <div class="seller">
+          <h1>{{ inv.seller.name || 'قطع غيار' }}</h1>
+          @if (inv.seller.address || inv.seller.city) {
+            <p>{{ inv.seller.address }}{{ inv.seller.address && inv.seller.city ? ' · ' : '' }}{{ inv.seller.city }}</p>
+          }
+          @if (inv.seller.phone) {
+            <p dir="ltr">{{ inv.seller.phone }}</p>
+          }
+          @if (inv.seller.taxId) {
+            <p>الرقم الضريبي: {{ inv.seller.taxId }}</p>
+          }
+        </div>
+        <div class="meta">
+          <strong class="title">فاتورة ضريبية / تجارية</strong>
+          <dl>
+            <div><dt>رقم الفاتورة</dt><dd>{{ inv.invoiceNumber }}</dd></div>
+            <div><dt>التاريخ</dt><dd>{{ inv.issuedAt | date: 'mediumDate' }}</dd></div>
+            <div><dt>رقم الطلب</dt><dd>{{ inv.orderNumber }}</dd></div>
+            <div><dt>الحالة</dt><dd>{{ statusLabel(inv.status) }}</dd></div>
+          </dl>
+        </div>
+      </header>
+
+      <section class="parties">
+        <div>
+          <h2>البائع</h2>
+          <p>{{ inv.seller.name || 'قطع غيار' }}</p>
+        </div>
+        <div>
+          <h2>المشتري</h2>
+          <p><strong>{{ inv.buyer.name || inv.shopName }}</strong></p>
+          @if (inv.buyer.phone) {
+            <p dir="ltr">{{ inv.buyer.phone }}</p>
+          }
+          @if (inv.buyer.address || inv.buyer.city) {
+            <p>{{ inv.buyer.address }}{{ inv.buyer.address && inv.buyer.city ? ' · ' : '' }}{{ inv.buyer.city }}</p>
+          }
+        </div>
+      </section>
+
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>الصنف</th>
+            <th>الكمية</th>
+            <th>سعر الوحدة</th>
+            <th>الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (line of inv.items; track $index) {
+            <tr>
+              <td>{{ $index + 1 }}</td>
+              <td>
+                <strong>{{ line.title }}</strong>
+                @if (line.sku) {
+                  <small>{{ line.sku }}</small>
+                }
+              </td>
+              <td>{{ line.quantity }}</td>
+              <td>{{ line.unitPrice | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+              <td>{{ line.lineTotal | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <footer class="sheet__foot">
+        <div class="pay">
+          <span>طريقة الدفع</span>
+          <strong>{{ paymentLabel(inv.paymentMethod) }}</strong>
+          @if (inv.notes) {
+            <p class="notes">{{ inv.notes }}</p>
+          }
+        </div>
+        <div class="totals">
+          <div>
+            <span>المجموع الفرعي</span>
+            <strong>{{ inv.subtotal | currency: 'EGP':'symbol-narrow':'1.2-2' }}</strong>
+          </div>
+          <div class="grand">
+            <span>الإجمالي</span>
+            <strong>{{ inv.total | currency: 'EGP':'symbol-narrow':'1.2-2' }}</strong>
+          </div>
+        </div>
+      </footer>
+    </article>
+  } @else {
+    <p class="muted">جارٍ التحميل…</p>
+  }
+</section>

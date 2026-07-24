@@ -1,0 +1,249 @@
+<section class="shops" dir="rtl">
+  <header class="shops__header">
+    <div>
+      <h1>المتاجر</h1>
+      <p>إدارة حسابات المتاجر: إضافة، تعديل، بحث، وتحديث الحالة.</p>
+    </div>
+    <div class="shops__actions">
+      <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
+      <button type="button" class="btn btn-primary" (click)="openCreate()">إضافة متجر</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  <div class="toolbar">
+    <label class="search">
+      <input
+        type="search"
+        [value]="searchDraft"
+        (input)="onSearchInput($any($event.target).value)"
+        placeholder="ابحث بالاسم أو المتجر أو الجوال أو المدينة…"
+        aria-label="بحث في المتاجر"
+      />
+      @if (searchDraft) {
+        <button type="button" class="search__clear" (click)="clearSearch()">مسح</button>
+      }
+    </label>
+    <div class="filters" role="group" aria-label="تصفية حسب الحالة">
+      @for (opt of statusOptions; track opt.value) {
+        <button
+          type="button"
+          class="filter"
+          [class.filter--on]="statusFilter() === opt.value"
+          (click)="setStatusFilter(opt.value)"
+        >
+          {{ opt.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>المتجر</th>
+          <th>المالك</th>
+          <th>الجوال</th>
+          <th>المدينة</th>
+          <th>الحالة</th>
+          <th>التسجيل</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="7" class="muted">جارٍ التحميل…</td></tr>
+        } @else if (shops().length === 0) {
+          <tr>
+            <td colspan="7" class="muted">
+              {{
+                searchQuery() || statusFilter()
+                  ? 'لا توجد نتائج.'
+                  : 'لا توجد متاجر بعد. أضف أول متجر.'
+              }}
+            </td>
+          </tr>
+        } @else {
+          @for (shop of shops(); track shop.id) {
+            <tr>
+              <td>
+                <strong>{{ shop.shopName }}</strong>
+                <small class="notes">{{ shop.address }}</small>
+              </td>
+              <td>{{ shop.fullName }}</td>
+              <td dir="ltr">{{ shop.phone }}</td>
+              <td>{{ shop.city }}</td>
+              <td>
+                <span
+                  class="chip"
+                  [class.chip--pending]="shop.status === 'PENDING_VERIFICATION'"
+                  [class.chip--off]="shop.status === 'REJECTED'"
+                >
+                  {{ statusLabel(shop.status) }}
+                </span>
+                @if (shop.status === 'REJECTED' && shop.rejectionReason) {
+                  <small class="notes">{{ shop.rejectionReason }}</small>
+                }
+              </td>
+              <td>
+                {{ shop.createdAt ? (shop.createdAt | date: 'mediumDate') : '—' }}
+              </td>
+              <td class="row-actions">
+                @if (shop.commercialRegPhotoUrl) {
+                  <button
+                    type="button"
+                    class="btn btn-ghost"
+                    (click)="openPreview(photoUrl(shop.commercialRegPhotoUrl))"
+                  >
+                    الصورة
+                  </button>
+                }
+                @if (shop.status === 'PENDING_VERIFICATION') {
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    (click)="setStatus(shop, 'APPROVED')"
+                  >
+                    اعتماد
+                  </button>
+                }
+                @if (shop.status === 'APPROVED') {
+                  <button
+                    type="button"
+                    class="btn btn-ghost"
+                    (click)="setStatus(shop, 'REJECTED')"
+                  >
+                    إيقاف
+                  </button>
+                }
+                @if (shop.status === 'REJECTED') {
+                  <button
+                    type="button"
+                    class="btn btn-ghost"
+                    (click)="setStatus(shop, 'APPROVED')"
+                  >
+                    إعادة اعتماد
+                  </button>
+                }
+                <button type="button" class="btn btn-ghost" (click)="openEdit(shop)">تعديل</button>
+                <button type="button" class="btn btn-danger" (click)="remove(shop)">حذف</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="20"
+    itemLabel="متجر"
+    ariaLabel="صفحات المتاجر"
+    (pageChange)="goPage($event)"
+  />
+
+  @if (editorOpen()) {
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal__card">
+        <header>
+          <h2>{{ editingId() ? 'تعديل متجر' : 'إضافة متجر جديد' }}</h2>
+          <button type="button" class="btn btn-ghost" (click)="closeEditor()">إغلاق</button>
+        </header>
+        <form [formGroup]="form" (ngSubmit)="save()">
+          <div class="grid">
+            <label>
+              اسم المتجر
+              <input formControlName="shopName" />
+            </label>
+            <label>
+              اسم المالك
+              <input formControlName="fullName" />
+            </label>
+            <label>
+              رقم الجوال
+              <input formControlName="phone" dir="ltr" />
+            </label>
+            <label>
+              المدينة
+              <input formControlName="city" />
+            </label>
+          </div>
+          <label>
+            العنوان
+            <input formControlName="address" />
+          </label>
+          <div class="grid">
+            <label>
+              كلمة المرور
+              <input
+                type="password"
+                formControlName="password"
+                dir="ltr"
+                [placeholder]="editingId() ? 'اتركها فارغة للإبقاء عليها' : ''"
+              />
+            </label>
+            <label>
+              الحالة
+              <select formControlName="status">
+                <option value="APPROVED">معتمد</option>
+                <option value="PENDING_VERIFICATION">قيد المراجعة</option>
+                <option value="REJECTED">مرفوض</option>
+              </select>
+            </label>
+          </div>
+          @if (form.controls.status.value === 'REJECTED') {
+            <label>
+              سبب الرفض
+              <textarea rows="2" formControlName="rejectionReason"></textarea>
+            </label>
+          }
+          <label>
+            رابط صورة السجل التجاري (اختياري)
+            <input formControlName="commercialRegPhotoUrl" dir="ltr" placeholder="/uploads/…" />
+          </label>
+          <footer>
+            <button type="button" class="btn btn-ghost" (click)="closeEditor()">إلغاء</button>
+            <button type="submit" class="btn btn-primary" [disabled]="saving()">
+              {{ saving() ? 'جارٍ الحفظ…' : 'حفظ' }}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  }
+
+  @if (previewSrc()) {
+    <div class="modal" role="dialog" aria-modal="true" (click)="closePreview()">
+      <div class="modal__preview" (click)="$event.stopPropagation()">
+        <header>
+          <h2>صورة السجل التجاري</h2>
+          <button type="button" class="btn btn-ghost" (click)="closePreview()">إغلاق</button>
+        </header>
+        <img [src]="previewSrc()!" alt="السجل التجاري" />
+      </div>
+    </div>
+  }
+
+  <app-confirm-dialog
+    [open]="!!deleteTarget()"
+    title="حذف المتجر؟"
+    [message]="
+      deleteTarget()
+        ? 'سيتم حذف «' +
+          deleteTarget()!.shopName +
+          '» نهائياً إن لم يكن له طلبات. المتاجر ذات الطلبات لا تُحذف — استخدم الرفض بدلًا من ذلك.'
+        : ''
+    "
+    confirmLabel="حذف"
+    [busy]="deleting()"
+    (confirmed)="confirmDelete()"
+    (cancelled)="cancelDelete()"
+  />
+</section>
