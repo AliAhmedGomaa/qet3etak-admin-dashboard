@@ -1,5 +1,3 @@
-export type QualityGrade = 'Original' | 'HighCopy' | 'Copy' | 'Used';
-
 export interface TieredPrice {
   minQty: number;
   price: number;
@@ -12,7 +10,8 @@ export interface Product {
   model: string;
   category: string;
   part?: string;
-  qualityGrade: QualityGrade;
+  qualityId?: string;
+  qualityGrade: string;
   stockQuantity: number;
   basePrice: number;
   costPrice?: number;
@@ -21,10 +20,3 @@ export interface Product {
   sku?: string;
   isActive?: boolean;
 }
-
-export const QUALITY_GRADES: QualityGrade[] = [
-  'Original',
-  'HighCopy',
-  'Copy',
-  'Used',
-];

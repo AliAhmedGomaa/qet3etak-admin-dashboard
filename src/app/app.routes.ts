@@ -64,6 +64,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'qualities',
+        loadComponent: () =>
+          import('./features/qualities/qualities-admin').then(
+            (m) => m.QualitiesAdmin,
+          ),
+      },
+      {
         path: 'data-import',
         loadComponent: () =>
           import('./features/data-import/data-import').then(

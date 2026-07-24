@@ -164,9 +164,10 @@
           <label>
             درجة الجودة
             <app-searchable-select
-              [options]="gradeOptions"
-              formControlName="qualityGrade"
+              [options]="gradeOptions()"
+              formControlName="qualityId"
               placeholder="اختر الدرجة"
+              searchPlaceholder="ابحث عن جودة…"
             />
           </label>
           <label>المخزون<input type="number" min="0" formControlName="stockQuantity" /></label>

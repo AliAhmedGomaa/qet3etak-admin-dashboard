@@ -1,0 +1,156 @@
+<section class="brands" dir="rtl">
+  <header class="brands__header">
+    <div>
+      <h1>درجات الجودة</h1>
+      <p>إدارة خيارات جودة المنتجات الظاهرة في المخزون وكتالوج الجملة.</p>
+    </div>
+    <div class="brands__actions">
+      <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
+      <button type="button" class="btn btn-primary" (click)="openCreate()">إضافة جودة</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  <div class="toolbar">
+    <label class="search">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M8.5 14.5a6 6 0 100-12 6 6 0 000 12zM17 17l-3.2-3.2"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <input
+        type="search"
+        [value]="searchDraft"
+        (input)="onSearchInput($any($event.target).value)"
+        placeholder="ابحث بالاسم أو الرمز…"
+        aria-label="بحث في درجات الجودة"
+      />
+      @if (searchDraft) {
+        <button type="button" class="search__clear" (click)="clearSearch()" aria-label="مسح البحث">
+          مسح
+        </button>
+      }
+    </label>
+    @if (searchQuery()) {
+      <p class="search__hint">نتائج البحث عن «{{ searchQuery() }}»</p>
+    }
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>الرمز</th>
+          <th>الوصف</th>
+          <th>الترتيب</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="6" class="muted">جارٍ التحميل…</td></tr>
+        } @else if (qualities().length === 0) {
+          <tr><td colspan="6" class="muted">{{ searchQuery() ? 'لا توجد نتائج لهذا البحث.' : 'لا توجد درجات جودة بعد.' }}</td></tr>
+        } @else {
+          @for (quality of qualities(); track quality.id) {
+            <tr>
+              <td><strong>{{ quality.name }}</strong></td>
+              <td><code>{{ quality.code }}</code></td>
+              <td>{{ quality.description || '—' }}</td>
+              <td>{{ quality.sortOrder }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="chip"
+                  [class.chip--off]="!quality.isActive"
+                  (click)="toggleActive(quality)"
+                >
+                  {{ quality.isActive ? 'نشط' : 'متوقف' }}
+                </button>
+              </td>
+              <td class="row-actions">
+                <button type="button" class="btn btn-ghost" (click)="openEdit(quality)">تعديل</button>
+                <button type="button" class="btn btn-danger" (click)="remove(quality)">حذف</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="20"
+    itemLabel="جودة"
+    ariaLabel="صفحات درجات الجودة"
+    (pageChange)="goPage($event)"
+  />
+</section>
+
+@if (editorOpen()) {
+  <div class="overlay" (click)="closeEditor()">
+    <div class="drawer" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header>
+        <h2>{{ editingId() ? 'تعديل درجة جودة' : 'درجة جودة جديدة' }}</h2>
+        <button type="button" class="btn btn-ghost" (click)="closeEditor()">إغلاق</button>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <label>
+          الاسم
+          <input formControlName="name" placeholder="Original, OEM…" />
+        </label>
+
+        <label>
+          الرمز (اختياري — يُشتق من الاسم تلقائياً)
+          <input formControlName="code" placeholder="original" dir="ltr" />
+        </label>
+
+        <label>
+          الوصف
+          <input formControlName="description" placeholder="وصف مختصر…" />
+        </label>
+
+        <div class="grid-2">
+          <label>
+            الترتيب
+            <input type="number" formControlName="sortOrder" />
+          </label>
+          <label class="active-toggle">
+            <input type="checkbox" formControlName="isActive" />
+            <span>جودة نشطة</span>
+          </label>
+        </div>
+
+        <footer>
+          <button type="button" class="btn btn-ghost" (click)="closeEditor()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'جارٍ الحفظ…' : 'حفظ' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="!!deleteTarget()"
+  title="تأكيد الحذف"
+  [message]="deleteTarget() ? 'هل تريد حذف درجة الجودة «' + deleteTarget()!.name + '»؟ لا يمكن التراجع عن هذا الإجراء.' : ''"
+  confirmLabel="حذف الجودة"
+  [busy]="deleting()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()"
+/>

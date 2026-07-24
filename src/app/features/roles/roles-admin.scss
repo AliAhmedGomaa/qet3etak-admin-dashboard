@@ -328,8 +328,8 @@ td {
   max-width: 100%;
   border-radius: 999px;
   padding: 0.3rem 0.35rem 0.3rem 0.75rem;
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--chip-ok-bg, #d1fae5);
+  color: var(--chip-ok-ink, #065f46);
   font-size: 0.75rem;
   font-weight: 700;
   line-height: 1.2;
@@ -349,8 +349,8 @@ td {
   height: 1.35rem;
   border: 0;
   border-radius: 999px;
-  background: rgba(6, 95, 70, 0.12);
-  color: #065f46;
+  background: color-mix(in srgb, var(--chip-ok-ink, #065f46) 14%, transparent);
+  color: var(--chip-ok-ink, #065f46);
   font: inherit;
   font-size: 0.95rem;
   line-height: 1;
@@ -361,7 +361,7 @@ td {
 }
 
 .perm-chip__remove:hover {
-  background: rgba(6, 95, 70, 0.22);
+  background: color-mix(in srgb, var(--chip-ok-ink, #065f46) 24%, transparent);
 }
 
 .perm-empty {

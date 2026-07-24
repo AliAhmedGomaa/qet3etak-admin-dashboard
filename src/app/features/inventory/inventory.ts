@@ -13,12 +13,14 @@ import {
   Validators,
 } from '@angular/forms';
 import { CurrencyPipe } from '@angular/common';
-import { Product, QUALITY_GRADES } from '../../core/products/product.models';
+import { Product } from '../../core/products/product.models';
 import { ProductsAdminService } from '../../core/products/products-admin.service';
 import { Brand } from '../../core/brands/brand.models';
 import { BrandsAdminService } from '../../core/brands/brands-admin.service';
 import { Category } from '../../core/categories/category.models';
 import { CategoriesAdminService } from '../../core/categories/categories-admin.service';
+import { Quality } from '../../core/qualities/quality.models';
+import { QualitiesAdminService } from '../../core/qualities/qualities-admin.service';
 import { qualityGradeAr } from '../../core/i18n/ar-labels';
 import { environment } from '../../../environments/environment';
 import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
@@ -48,10 +50,12 @@ export class Inventory implements OnInit {
   private readonly api = inject(ProductsAdminService);
   private readonly brandsApi = inject(BrandsAdminService);
   private readonly categoriesApi = inject(CategoriesAdminService);
+  private readonly qualitiesApi = inject(QualitiesAdminService);
 
   protected readonly products = signal<Product[]>([]);
   protected readonly brands = signal<Brand[]>([]);
   protected readonly categories = signal<Category[]>([]);
+  protected readonly qualities = signal<Quality[]>([]);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly savingId = signal<string | null>(null);
@@ -63,7 +67,6 @@ export class Inventory implements OnInit {
   protected readonly searchQuery = signal('');
   protected searchDraft = '';
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
-  protected readonly grades = QUALITY_GRADES;
   protected readonly gradeLabel = (g: string) => qualityGradeAr[g] ?? g;
 
   protected readonly brandOptions = computed<SearchOption[]>(() =>
@@ -72,10 +75,12 @@ export class Inventory implements OnInit {
   protected readonly categoryOptions = computed<SearchOption[]>(() =>
     this.categories().map((c) => ({ value: c.name, label: c.name })),
   );
-  protected readonly gradeOptions: SearchOption[] = QUALITY_GRADES.map((g) => ({
-    value: g,
-    label: qualityGradeAr[g] ?? g,
-  }));
+  protected readonly gradeOptions = computed<SearchOption[]>(() =>
+    this.qualities().map((q) => ({
+      value: q.id,
+      label: qualityGradeAr[q.name] ?? q.name,
+    })),
+  );
   protected readonly imagePreview = signal<string | null>(null);
   protected readonly deleteTarget = signal<Product | null>(null);
   protected readonly deleting = signal(false);
@@ -87,10 +92,7 @@ export class Inventory implements OnInit {
     model: ['', Validators.required],
     category: ['', Validators.required],
     part: [''],
-    qualityGrade: this.fb.nonNullable.control<'Original' | 'HighCopy' | 'Copy' | 'Used'>(
-      'Original',
-      Validators.required,
-    ),
+    qualityId: ['', Validators.required],
     stockQuantity: [0, [Validators.required, Validators.min(0)]],
     basePrice: [0, [Validators.required, Validators.min(0)]],
     sku: [''],
@@ -109,6 +111,9 @@ export class Inventory implements OnInit {
     });
     this.categoriesApi.list({ page: 1, limit: 100 }).subscribe({
       next: (res) => this.categories.set(res.items.filter((c) => c.isActive)),
+    });
+    this.qualitiesApi.list({ page: 1, limit: 100 }).subscribe({
+      next: (res) => this.qualities.set(res.items.filter((q) => q.isActive)),
     });
   }
 
@@ -189,13 +194,14 @@ export class Inventory implements OnInit {
     this.editingId.set(null);
     this.imageFile = null;
     this.imagePreview.set(null);
+    const defaultQualityId = this.qualities()[0]?.id ?? '';
     this.form.reset({
       title: '',
       brand: '',
       model: '',
       category: '',
       part: '',
-      qualityGrade: 'Original',
+      qualityId: defaultQualityId,
       stockQuantity: 0,
       basePrice: 0,
       sku: '',
@@ -209,13 +215,19 @@ export class Inventory implements OnInit {
     this.editingId.set(product.id);
     this.imageFile = null;
     this.imagePreview.set(this.mediaUrl(product.imageUrl) || null);
+    const qualityId =
+      product.qualityId ||
+      this.qualities().find(
+        (q) => q.name.toLowerCase() === product.qualityGrade.toLowerCase(),
+      )?.id ||
+      '';
     this.form.patchValue({
       title: product.title,
       brand: product.brand,
       model: product.model,
       category: product.category,
       part: product.part ?? '',
-      qualityGrade: product.qualityGrade,
+      qualityId,
       stockQuantity: product.stockQuantity,
       basePrice: product.basePrice,
       sku: product.sku ?? '',
@@ -274,7 +286,7 @@ export class Inventory implements OnInit {
       fd.append('model', raw.model.trim());
       fd.append('category', raw.category.trim());
       if (raw.part.trim()) fd.append('part', raw.part.trim());
-      fd.append('qualityGrade', raw.qualityGrade);
+      fd.append('qualityId', raw.qualityId);
       fd.append('stockQuantity', String(raw.stockQuantity));
       fd.append('basePrice', String(raw.basePrice));
       fd.append('sku', raw.sku.trim());
@@ -305,7 +317,7 @@ export class Inventory implements OnInit {
         model: raw.model.trim(),
         category: raw.category.trim(),
         part: raw.part.trim() || undefined,
-        qualityGrade: raw.qualityGrade,
+        qualityId: raw.qualityId,
         stockQuantity: Number(raw.stockQuantity),
         basePrice: Number(raw.basePrice),
         sku: raw.sku.trim(),
