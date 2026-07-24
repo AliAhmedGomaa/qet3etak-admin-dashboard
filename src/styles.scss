@@ -22,6 +22,10 @@
   --shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
   --chip-ok-bg: #d1fae5;
   --chip-ok-ink: #065f46;
+  --chip-warn-bg: #fef3c7;
+  --chip-warn-ink: #92400e;
+  --chip-info-bg: #eff6ff;
+  --chip-info-ink: #1d4ed8;
   --input-bg: #f8fafc;
   --thead-bg: #f8fafc;
   --row-hover: #f1f5f9;
@@ -50,9 +54,13 @@ html[data-theme='dark'] {
   --shadow: 0 12px 32px rgba(2, 6, 23, 0.45);
   --chip-ok-bg: rgba(16, 184, 128, 0.2);
   --chip-ok-ink: #6ee7b7;
+  --chip-warn-bg: rgba(245, 158, 11, 0.2);
+  --chip-warn-ink: #fcd34d;
+  --chip-info-bg: rgba(59, 130, 246, 0.2);
+  --chip-info-ink: #93c5fd;
   --input-bg: #0f172a;
   --thead-bg: #1a2436;
-  --row-hover: rgba(148, 163, 184, 0.08);
+  --row-hover: rgba(148, 163, 184, 0.1);
   --scroll-thumb: #475569;
   color-scheme: dark;
 }
@@ -87,7 +95,7 @@ table {
   overflow: hidden;
 }
 
-/* ——— Dark theme: cover encapsulated feature panels without per-file rewrites ——— */
+/* ——— Dark theme: pierce encapsulated feature panels ——— */
 html[data-theme='dark'] {
   .login {
     background:
@@ -114,7 +122,9 @@ html[data-theme='dark'] {
     color: var(--warning-ink) !important;
   }
 
+  /* Panels / cards / list rows */
   .table-wrap,
+  [class*='table-wrap'],
   .pager,
   .search,
   .role-card,
@@ -132,30 +142,95 @@ html[data-theme='dark'] {
   .chat-pane,
   .board-col,
   .inv-card,
-  .empty-state {
+  .empty-state,
+  .column,
+  .grid > article,
+  .center .grid > article,
+  .detail-items li,
+  .active-toggle,
+  .tiers,
+  .confirm-dialog,
+  .ss__panel,
+  .ss__trigger {
     background: var(--surface) !important;
     border-color: var(--border) !important;
-    color: var(--ink);
+    color: var(--ink) !important;
   }
 
-  th {
+  .column {
+    background: var(--surface-muted) !important;
+  }
+
+  .column__head {
+    border-color: var(--border) !important;
+    color: var(--ink) !important;
+  }
+
+  .column__head h2 {
+    color: var(--ink) !important;
+  }
+
+  .column__head span {
+    background: var(--accent) !important;
+    color: #042f1e !important;
+  }
+
+  .card p,
+  .card li,
+  .card small,
+  .grid > article small,
+  .grid > article p {
+    color: var(--ink-muted) !important;
+  }
+
+  .card__top span,
+  .courier,
+  .quoted {
+    color: var(--accent) !important;
+  }
+
+  /* Tables */
+  table,
+  .data-table {
+    color: var(--ink) !important;
+  }
+
+  th,
+  th.actions-col {
     background: var(--thead-bg) !important;
     color: var(--ink-muted) !important;
     border-color: var(--border) !important;
   }
 
-  td {
+  td,
+  td.actions-cell {
+    background: var(--surface) !important;
     color: var(--ink) !important;
     border-color: var(--border) !important;
   }
 
-  tr:hover td {
-    background: var(--row-hover);
+  tbody tr:hover,
+  tbody tr:hover td,
+  tbody tr:hover td.actions-cell,
+  tbody tr.active,
+  tbody tr.active td {
+    background: var(--row-hover) !important;
   }
 
+  .prod strong,
+  .code {
+    color: var(--ink) !important;
+  }
+
+  .code {
+    background: var(--surface-elevated) !important;
+  }
+
+  /* Forms */
   input,
   select,
-  textarea {
+  textarea,
+  .inline {
     background: var(--input-bg) !important;
     border-color: var(--border) !important;
     color: var(--ink) !important;
@@ -163,13 +238,43 @@ html[data-theme='dark'] {
 
   input::placeholder,
   textarea::placeholder {
-    color: var(--ink-soft);
+    color: var(--ink-soft) !important;
   }
 
+  .search {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    box-shadow: none !important;
+  }
+
+  .search input {
+    background: transparent !important;
+    color: var(--ink) !important;
+  }
+
+  .search__clear {
+    background: var(--surface-elevated) !important;
+    color: var(--ink-muted) !important;
+  }
+
+  .search__clear:hover {
+    background: var(--border) !important;
+    color: var(--ink) !important;
+  }
+
+  .search svg,
+  .search__hint,
+  .hint {
+    color: var(--ink-muted) !important;
+  }
+
+  /* Buttons (keep primary green) */
   .btn,
   .btn-ghost,
+  .btn-sm,
   .pager__nav,
-  .chip--off,
+  .assign-btn,
+  .filters button,
   .bell,
   .menu-btn {
     background: var(--surface-elevated) !important;
@@ -177,43 +282,173 @@ html[data-theme='dark'] {
     color: var(--ink) !important;
   }
 
+  .assign-btn {
+    border-style: dashed !important;
+    border-color: var(--border-strong) !important;
+  }
+
+  .assign-btn:hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+  }
+
   .btn-primary,
-  .pager__page.is-active {
+  .btn-approve,
+  .btn.primary,
+  .btn--primary,
+  .pager__page.is-active,
+  .filters button.on,
+  .tab.is-on {
     background: var(--accent) !important;
     border-color: var(--accent) !important;
     color: #042f1e !important;
   }
 
-  .btn-danger {
-    color: var(--danger) !important;
-    border-color: var(--danger-border) !important;
+  .range__btn.is-on {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #042f1e !important;
   }
 
-  .err {
+  .btn-danger,
+  .btn-reject,
+  .btn--warn {
+    background: var(--danger-bg) !important;
+    color: var(--danger) !important;
+    border-color: var(--danger-border) !important;
+    box-shadow: none !important;
+  }
+
+  .btn--ghost {
+    background: transparent !important;
+    border-color: var(--border) !important;
+    color: var(--ink) !important;
+  }
+
+  .tab,
+  .range__btn {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--ink-muted) !important;
+  }
+
+  .tab:hover,
+  .range__btn:hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+  }
+
+  /* Chips / pills / tags */
+  .chip,
+  .chip:not(.chip--off),
+  .tag {
+    background: var(--chip-ok-bg) !important;
+    color: var(--chip-ok-ink) !important;
+  }
+
+  .chip--off,
+  .tier {
+    background: var(--surface-elevated) !important;
+    color: var(--ink-muted) !important;
+    border-color: var(--border) !important;
+  }
+
+  .chip--pending {
+    background: var(--chip-warn-bg) !important;
+    color: var(--chip-warn-ink) !important;
+  }
+
+  .chip--suspended {
+    background: var(--danger-bg) !important;
+    color: var(--danger) !important;
+  }
+
+  .tag--system {
+    background: var(--chip-info-bg) !important;
+    color: var(--chip-info-ink) !important;
+  }
+
+  .err,
+  .returns__error,
+  .approvals__error {
     background: var(--danger-bg) !important;
     color: var(--danger) !important;
   }
 
   .muted,
   .hint,
+  .sub,
+  .kpi__label,
+  .kpi small,
   header p,
   .users__header p,
   .delivery__header p,
   .shops__header p,
-  .branches__header p {
+  .branches__header p,
+  .returns__header p,
+  .approvals__header p,
+  .inventory__header p,
+  .rpt__head p,
+  .fin__head p,
+  .modal > p,
+  .modal__hint,
+  .desc {
     color: var(--ink-muted) !important;
   }
 
+  h1,
+  .returns__header h1,
+  .approvals__header h1,
+  .inventory__header h1,
+  .users__header h1,
+  .shops__header h1,
+  .kpi__value,
+  .card h2,
+  label,
+  .full,
+  .detail-reason {
+    color: var(--ink) !important;
+  }
+
+  tr.is-zero td {
+    color: var(--danger) !important;
+  }
+
+  /* Modals / overlays — .modal is a card on some pages, a scrim on orders-board */
   .overlay,
-  .modal,
   .modal-overlay,
-  .scrim {
+  .confirm-overlay,
+  .scrim,
+  .board .modal {
     background: var(--overlay) !important;
   }
 
-  .chip:not(.chip--off) {
-    background: var(--chip-ok-bg) !important;
-    color: var(--chip-ok-ink) !important;
+  .returns .modal,
+  .approvals .modal,
+  .center .modal,
+  .inventory .drawer,
+  .modal__card {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--ink) !important;
+  }
+
+  .confirm-dialog h2,
+  .modal h2,
+  .modal__card h2,
+  .drawer h2 {
+    color: var(--ink) !important;
+  }
+
+  .confirm-dialog p,
+  .modal p,
+  .modal__card p {
+    color: var(--ink-muted) !important;
+  }
+
+  .ss__value.is-placeholder,
+  .ss__caret {
+    color: var(--ink-soft) !important;
   }
 
   .toolbar {
