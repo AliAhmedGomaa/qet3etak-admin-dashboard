@@ -1,0 +1,529 @@
+<section class="rpt" dir="rtl">
+  <header class="rpt__head">
+    <div>
+      <h1>التقارير</h1>
+      <p>تقارير تشغيلية للمبيعات والمتاجر والمنتجات والائتمان والتوصيل والمخزون.</p>
+    </div>
+    <div class="rpt__actions">
+      @if (tab() !== 'summary') {
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="exporting() || loading()"
+          (click)="exportCsv()"
+        >
+          {{ exporting() ? 'جارٍ التصدير…' : 'تصدير CSV' }}
+        </button>
+      }
+      <button type="button" class="btn btn--ghost" (click)="load()">تحديث</button>
+    </div>
+  </header>
+
+  <nav class="rpt__tabs" aria-label="أنواع التقارير">
+    @for (t of tabs; track t.id) {
+      <button
+        type="button"
+        class="tab"
+        [class.is-on]="tab() === t.id"
+        (click)="setTab(t.id)"
+      >
+        {{ t.label }}
+      </button>
+    }
+  </nav>
+
+  @if (tab() !== 'inventory') {
+    <div class="rpt__range" role="tablist">
+      @for (p of presets; track p.id) {
+        <button
+          type="button"
+          role="tab"
+          class="range__btn"
+          [class.is-on]="preset() === p.id"
+          (click)="setPreset(p.id)"
+        >
+          {{ p.label }}
+        </button>
+      }
+    </div>
+
+    @if (preset() === 'custom') {
+      <div class="rpt__custom">
+        <label>
+          من
+          <input type="date" [(ngModel)]="customFrom" />
+        </label>
+        <label>
+          إلى
+          <input type="date" [(ngModel)]="customTo" />
+        </label>
+        <button type="button" class="btn btn--primary" (click)="applyCustom()">تطبيق</button>
+      </div>
+    }
+  } @else {
+    <div class="rpt__custom">
+      <label>
+        حد المخزون المنخفض
+        <input
+          type="number"
+          min="0"
+          [(ngModel)]="lowStockThreshold"
+          (change)="load()"
+        />
+      </label>
+    </div>
+  }
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="muted">جارٍ التحميل…</p>
+  }
+
+  <!-- Summary -->
+  @if (tab() === 'summary' && summary(); as s) {
+    <div class="kpis">
+      <article class="kpi">
+        <span class="kpi__label">الطلبات</span>
+        <strong class="kpi__value">{{ s.orderCount }}</strong>
+        <small>إيراد {{ s.revenue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</small>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">مُسلَّم</span>
+        <strong class="kpi__value">{{ s.deliveredCount }}</strong>
+        <small>{{ s.deliveredRevenue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</small>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">ديون الائتمان</span>
+        <strong class="kpi__value">{{ s.totalDebt | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
+        <small>{{ s.shopsWithDebt }} متجر مدين</small>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">رسوم توصيل</span>
+        <strong class="kpi__value">{{ s.deliveryFees | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
+        <small>{{ s.assignedDeliveries }} توصيلة معيّنة</small>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">مخزون منخفض</span>
+        <strong class="kpi__value">{{ s.lowStockCount }}</strong>
+        <small>منتجات ≤ 10 وحدات</small>
+      </article>
+    </div>
+  }
+
+  <!-- Sales -->
+  @if (tab() === 'sales' && sales(); as r) {
+    <div class="kpis kpis--3">
+      <article class="kpi">
+        <span class="kpi__label">عدد الطلبات</span>
+        <strong class="kpi__value">{{ r.totals.orderCount }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">الإيرادات</span>
+        <strong class="kpi__value">{{ r.totals.revenue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">الوحدات</span>
+        <strong class="kpi__value">{{ r.totals.unitsSold }}</strong>
+      </article>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>حسب الحالة</h2>
+        <table>
+          <thead>
+            <tr><th>الحالة</th><th>العدد</th><th>الإيراد</th></tr>
+          </thead>
+          <tbody>
+            @for (row of r.byStatus; track row.status) {
+              <tr>
+                <td>{{ labelStatus(row.status) }}</td>
+                <td class="num">{{ row.orderCount }}</td>
+                <td class="num">{{ row.revenue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>حسب طريقة الدفع</h2>
+        <table>
+          <thead>
+            <tr><th>الطريقة</th><th>العدد</th><th>الإيراد</th></tr>
+          </thead>
+          <tbody>
+            @for (row of r.byPaymentMethod; track row.paymentMethod) {
+              <tr>
+                <td>{{ labelPayment(row.paymentMethod) }}</td>
+                <td class="num">{{ row.orderCount }}</td>
+                <td class="num">{{ row.revenue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>حسب اليوم</h2>
+      @if (r.byDay.length) {
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>التاريخ</th><th>الطلبات</th><th>الإيراد</th></tr>
+            </thead>
+            <tbody>
+              @for (row of r.byDay; track row.date) {
+                <tr>
+                  <td>{{ row.date }}</td>
+                  <td class="num">{{ row.orderCount }}</td>
+                  <td class="num">{{ row.revenue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="muted">لا توجد بيانات في هذه الفترة.</p>
+      }
+    </div>
+  }
+
+  <!-- Shops -->
+  @if (tab() === 'shops' && shops(); as r) {
+    <div class="kpis kpis--3">
+      <article class="kpi">
+        <span class="kpi__label">متاجر نشطة</span>
+        <strong class="kpi__value">{{ r.summary.shopCount }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">الطلبات</span>
+        <strong class="kpi__value">{{ r.summary.orderCount }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">الإيرادات</span>
+        <strong class="kpi__value">{{ r.summary.revenue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
+      </article>
+    </div>
+    <div class="card">
+      <h2>ترتيب المتاجر</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>المتجر</th><th>الطلبات</th><th>الوحدات</th><th>الإيراد</th></tr>
+        </thead>
+        <tbody>
+          @for (row of r.items; track row.shopId; let i = $index) {
+            <tr>
+              <td class="num">{{ (r.page - 1) * r.limit + i + 1 }}</td>
+              <td>{{ row.shopName }}</td>
+              <td class="num">{{ row.orderCount }}</td>
+              <td class="num">{{ row.unitsSold }}</td>
+              <td class="num">{{ row.revenue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <div class="pager">
+        <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="goPage(-1)">السابق</button>
+        <span>{{ page() }} / {{ r.totalPages }}</span>
+        <button type="button" class="btn btn--ghost" [disabled]="page() >= r.totalPages" (click)="goPage(1)">التالي</button>
+      </div>
+    </div>
+  }
+
+  <!-- Products -->
+  @if (tab() === 'products' && products(); as r) {
+    <div class="card">
+      <h2>أفضل المنتجات</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>المنتج</th><th>SKU</th><th>الكمية</th><th>الطلبات</th><th>الإيراد</th></tr>
+        </thead>
+        <tbody>
+          @for (row of r.items; track row.productId; let i = $index) {
+            <tr>
+              <td class="num">{{ (r.page - 1) * r.limit + i + 1 }}</td>
+              <td>{{ row.title }}</td>
+              <td>{{ row.sku || '—' }}</td>
+              <td class="num">{{ row.quantitySold }}</td>
+              <td class="num">{{ row.orderCount }}</td>
+              <td class="num">{{ row.revenue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <div class="pager">
+        <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="goPage(-1)">السابق</button>
+        <span>{{ page() }} / {{ r.totalPages }}</span>
+        <button type="button" class="btn btn--ghost" [disabled]="page() >= r.totalPages" (click)="goPage(1)">التالي</button>
+      </div>
+    </div>
+  }
+
+  <!-- Credit -->
+  @if (tab() === 'credit' && credit(); as r) {
+    <div class="kpis kpis--3">
+      <article class="kpi">
+        <span class="kpi__label">إجمالي الديون</span>
+        <strong class="kpi__value">{{ r.summary.totalDebt | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">حدود الائتمان</span>
+        <strong class="kpi__value">{{ r.summary.totalCreditLimit | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">متاجر مدينة</span>
+        <strong class="kpi__value">{{ r.summary.shopsWithDebt }}</strong>
+        <small>من {{ r.summary.walletCount }} محفظة</small>
+      </article>
+    </div>
+
+    <div class="card">
+      <h2>حركة المحافظ في الفترة</h2>
+      @if (r.movements.length) {
+        <table>
+          <thead>
+            <tr><th>النوع</th><th>العدد</th><th>المبلغ</th></tr>
+          </thead>
+          <tbody>
+            @for (m of r.movements; track m.type) {
+              <tr>
+                <td>{{ labelTx(m.type) }}</td>
+                <td class="num">{{ m.count }}</td>
+                <td class="num">{{ m.totalAmount | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="muted">لا توجد حركات في هذه الفترة.</p>
+      }
+    </div>
+
+    <div class="card">
+      <h2>الأرصدة الحالية</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>المتجر</th>
+              <th>الحد</th>
+              <th>الدين</th>
+              <th>المتاح</th>
+              <th>الاستخدام</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (b of r.balances; track b.shopId) {
+              <tr>
+                <td>{{ b.shopName || b.shopId }}</td>
+                <td class="num">{{ b.creditLimit | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+                <td class="num">{{ b.currentDebt | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+                <td class="num">{{ b.availableCredit | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+                <td class="num">{{ b.utilization | number: '1.0-0' }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Delivery -->
+  @if (tab() === 'delivery' && delivery(); as r) {
+    <div class="kpis kpis--3">
+      <article class="kpi">
+        <span class="kpi__label">توصيلات معيّنة</span>
+        <strong class="kpi__value">{{ r.summary.deliveries }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">تم التسليم</span>
+        <strong class="kpi__value">{{ r.summary.deliveredCount }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">رسوم مكتسبة</span>
+        <strong class="kpi__value">{{ r.summary.feesEarned | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
+      </article>
+    </div>
+    <div class="card">
+      <h2>حسب المندوب (الفترة)</h2>
+      @if (r.byCourier.length) {
+        <table>
+          <thead>
+            <tr>
+              <th>المندوب</th>
+              <th>معيّن</th>
+              <th>مُسلَّم</th>
+              <th>رسوم مكتسبة</th>
+              <th>قيمة الطلبات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of r.byCourier; track c.deliveryGuyId) {
+              <tr>
+                <td>{{ c.deliveryGuyName || '—' }}</td>
+                <td class="num">{{ c.deliveries }}</td>
+                <td class="num">{{ c.deliveredCount }}</td>
+                <td class="num">{{ c.feesEarned | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+                <td class="num">{{ c.orderRevenue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="muted">لا توجد توصيلات في هذه الفترة.</p>
+      }
+    </div>
+  }
+
+  <!-- Returns -->
+  @if (tab() === 'returns' && returns(); as r) {
+    <div class="kpis kpis--3">
+      <article class="kpi">
+        <span class="kpi__label">طلبات الإرجاع</span>
+        <strong class="kpi__value">{{ r.summary.returnCount }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">مبلغ الاسترداد</span>
+        <strong class="kpi__value">{{ r.summary.refundAmount | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">الوحدات</span>
+        <strong class="kpi__value">{{ r.summary.unitsReturned }}</strong>
+      </article>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>حسب الحالة</h2>
+        <table>
+          <thead>
+            <tr><th>الحالة</th><th>العدد</th><th>المبلغ</th></tr>
+          </thead>
+          <tbody>
+            @for (row of r.byStatus; track row.status) {
+              <tr>
+                <td>{{ labelStatus(row.status) }}</td>
+                <td class="num">{{ row.returnCount }}</td>
+                <td class="num">{{ row.refundAmount | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>طريقة الاسترداد (مقبول)</h2>
+        @if (r.byRefundMethod.length) {
+          <table>
+            <thead>
+              <tr><th>الطريقة</th><th>العدد</th><th>المبلغ</th></tr>
+            </thead>
+            <tbody>
+              @for (row of r.byRefundMethod; track row.refundMethod) {
+                <tr>
+                  <td>{{ labelRefund(row.refundMethod) }}</td>
+                  <td class="num">{{ row.returnCount }}</td>
+                  <td class="num">{{ row.refundAmount | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="muted">لا بيانات.</p>
+        }
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>أحدث الطلبات</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>الطلب</th>
+              <th>المتجر</th>
+              <th>الحالة</th>
+              <th>المبلغ</th>
+              <th>التاريخ</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of r.recent; track row.id) {
+              <tr>
+                <td>{{ row.orderNumber }}</td>
+                <td>{{ row.shopName }}</td>
+                <td>{{ labelStatus(row.status) }}</td>
+                <td class="num">{{ row.refundAmount | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+                <td>{{ row.createdAt | date: 'yyyy-MM-dd' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Inventory -->
+  @if (tab() === 'inventory' && inventory(); as r) {
+    <div class="kpis">
+      <article class="kpi">
+        <span class="kpi__label">منتجات نشطة</span>
+        <strong class="kpi__value">{{ r.summary.productCount }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">الوحدات</span>
+        <strong class="kpi__value">{{ r.summary.totalUnits }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">قيمة التكلفة</span>
+        <strong class="kpi__value">{{ r.summary.inventoryValue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">نافد</span>
+        <strong class="kpi__value">{{ r.summary.outOfStock }}</strong>
+      </article>
+      <article class="kpi">
+        <span class="kpi__label">منخفض</span>
+        <strong class="kpi__value">{{ r.summary.lowStock }}</strong>
+        <small>≤ {{ r.lowStockThreshold }}</small>
+      </article>
+    </div>
+    <div class="card">
+      <h2>مخزون منخفض / نافد</h2>
+      @if (r.items.length) {
+        <table>
+          <thead>
+            <tr>
+              <th>المنتج</th>
+              <th>الماركة</th>
+              <th>الكمية</th>
+              <th>التكلفة</th>
+              <th>القيمة</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of r.items; track row.productId) {
+              <tr [class.is-zero]="row.stockQuantity <= 0">
+                <td>{{ row.title }}</td>
+                <td>{{ row.brand }}</td>
+                <td class="num">{{ row.stockQuantity }}</td>
+                <td class="num">{{ row.costPrice | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+                <td class="num">{{ row.stockValue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <div class="pager">
+          <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="goPage(-1)">السابق</button>
+          <span>{{ page() }} / {{ r.totalPages }}</span>
+          <button type="button" class="btn btn--ghost" [disabled]="page() >= r.totalPages" (click)="goPage(1)">التالي</button>
+        </div>
+      } @else {
+        <p class="muted">لا يوجد مخزون منخفض عند هذا الحد.</p>
+      }
+    </div>
+  }
+</section>
