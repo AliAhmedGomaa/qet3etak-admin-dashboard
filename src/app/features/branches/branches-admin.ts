@@ -61,19 +61,17 @@ export class BranchesAdmin implements OnInit {
 
   ngOnInit(): void {
     this.load();
-    this.usersApi.list({ limit: 100, role: 'STAFF' }).subscribe({
-      next: (res) => this.managers.set(res.items),
-      error: () => this.managers.set([]),
-    });
-    this.usersApi.list({ limit: 100, role: 'BRANCH_MANAGER' }).subscribe({
-      next: (res) =>
-        this.managers.update((cur) => {
-          const map = new Map(cur.map((u) => [u.id, u]));
-          for (const u of res.items) map.set(u.id, u);
-          return [...map.values()];
-        }),
-      error: () => undefined,
-    });
+    for (const role of ['STAFF', 'MANAGER', 'BRANCH_MANAGER'] as const) {
+      this.usersApi.list({ limit: 100, role }).subscribe({
+        next: (res) =>
+          this.managers.update((cur) => {
+            const map = new Map(cur.map((u) => [u.id, u]));
+            for (const u of res.items) map.set(u.id, u);
+            return [...map.values()];
+          }),
+        error: () => undefined,
+      });
+    }
   }
 
   protected load(): void {
@@ -237,10 +235,6 @@ export class BranchesAdmin implements OnInit {
         this.error.set(err?.error?.message ?? 'فشل تعيين مدير الفرع');
       },
     });
-  }
-
-  protected hasManagerOption(id: string): boolean {
-    return this.managers().some((u) => u.id === id);
   }
 
   protected toggleStatus(branch: Branch): void {

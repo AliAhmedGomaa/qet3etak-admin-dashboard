@@ -90,7 +90,7 @@ import { ThemeService } from '../../core/theme/theme.service';
       min-height: 3rem; border: 0; border-radius: 0.75rem; background: var(--brand);
       color: #fff; font: inherit; font-weight: 700; cursor: pointer;
     }
-    html[data-theme='dark'] button[type='submit'] {
+    :host-context(html[data-theme='dark']) button[type='submit'] {
       background: var(--accent);
       color: #042f1e;
     }
