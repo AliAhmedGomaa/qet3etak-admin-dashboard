@@ -81,6 +81,12 @@ export class UsersAdmin implements OnInit {
     return staff?.id ?? this.assignableRoles()[0]?.id ?? '';
   });
 
+  /** Create needs Role documents with ids from the API. */
+  protected readonly canCreateUser = computed(
+    () =>
+      this.assignableRoles().some((r) => !!r.id) && !!this.defaultRoleId(),
+  );
+
   protected readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(2)]],
     phone: ['', [Validators.required, Validators.pattern(/^[0-9+\-\s]{8,20}$/)]],
@@ -172,8 +178,10 @@ export class UsersAdmin implements OnInit {
   }
 
   protected openCreate(): void {
-    if (!this.defaultRoleId()) {
-      this.error.set('لا توجد أدوار متاحة للتعيين. حدّث الصفحة أو تحقق من صلاحياتك.');
+    if (!this.canCreateUser()) {
+      this.error.set(
+        'انتظر تحميل الأدوار أو أعد تحميل الصفحة قبل إضافة مستخدم',
+      );
       return;
     }
     this.editingId.set(null);
@@ -235,12 +243,15 @@ export class UsersAdmin implements OnInit {
     const id = this.editingId();
     const isBranchManager = this.editingBranchManager();
 
+    const roleCode = selected?.role || selected?.code;
     const req$ = id
       ? this.api.update(id, {
           fullName: raw.fullName.trim(),
           phone: raw.phone.trim(),
           isActive: raw.isActive,
-          ...(isBranchManager ? {} : { roleId: raw.roleId }),
+          ...(isBranchManager
+            ? {}
+            : { roleId: raw.roleId, ...(roleCode ? { role: roleCode } : {}) }),
           ...(raw.password.trim()
             ? { password: raw.password.trim() }
             : {}),
@@ -250,6 +261,7 @@ export class UsersAdmin implements OnInit {
           phone: raw.phone.trim(),
           password: raw.password.trim(),
           roleId: raw.roleId,
+          ...(roleCode ? { role: roleCode } : {}),
           status: raw.isActive ? 'APPROVED' : 'SUSPENDED',
         });
 

@@ -6,7 +6,14 @@
     </div>
     <div class="users__actions">
       <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
-      <button type="button" class="btn btn-primary" (click)="openCreate()">إضافة مستخدم</button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="!canCreateUser()"
+        (click)="openCreate()"
+      >
+        إضافة مستخدم
+      </button>
     </div>
   </header>
 
