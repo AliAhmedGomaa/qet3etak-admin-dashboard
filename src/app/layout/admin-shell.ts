@@ -374,8 +374,10 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
     }
 
     @media (max-width: 900px) {
+      /* Keep flex so .main/.content retain height — display:block collapses
+         flex:1 children (routed pages) to 0 and only the drawer appears. */
       .shell {
-        display: block;
+        display: flex;
       }
 
       .scrim {
@@ -393,6 +395,7 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
         inset-inline-start: 0;
         z-index: 50;
         width: min(18rem, 86vw);
+        /* Off-canvas toward the inline-start edge (right in RTL). */
         transform: translateX(110%);
         transition: transform 0.22s ease;
         box-shadow: -8px 0 32px rgba(15, 23, 42, 0.25);
@@ -400,6 +403,14 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
 
       .shell--nav-open .sidebar {
         transform: translateX(0);
+      }
+
+      .main {
+        flex: 1 1 auto;
+        width: 100%;
+        min-width: 0;
+        min-height: 100dvh;
+        height: 100dvh;
       }
 
       .menu-btn {
@@ -428,6 +439,8 @@ import { PwaInstallService } from '../core/pwa/pwa-install.service';
 
       .content {
         padding: 1rem;
+        flex: 1 1 auto;
+        min-height: 0;
       }
     }
 
