@@ -142,6 +142,9 @@ const BRANCH_MANAGER_PATHS = new Set([
                 <span class="bell__label">{{ push.enabled() ? 'الإشعارات مفعّلة' : 'تفعيل الإشعارات' }}</span>
               </button>
             }
+            @if (push.lastError(); as pushErr) {
+              <span class="push-err" [title]="pushErr">{{ pushErr }}</span>
+            }
           </div>
         </header>
         <div class="content app-shell-content">
@@ -171,6 +174,9 @@ const BRANCH_MANAGER_PATHS = new Set([
       padding-right: calc(0.75rem + env(safe-area-inset-right, 0px));
       display: flex;
       flex-direction: column;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
       border-inline-start: 1px solid rgba(255, 255, 255, 0.06);
       box-sizing: border-box;
     }
@@ -182,6 +188,7 @@ const BRANCH_MANAGER_PATHS = new Set([
       padding: 0.25rem 0.5rem 1.25rem;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       margin-bottom: 1rem;
+      flex-shrink: 0;
     }
 
     .mark {
@@ -219,12 +226,26 @@ const BRANCH_MANAGER_PATHS = new Set([
     .nav {
       display: flex;
       flex-direction: column;
-      gap: 0.2rem;
-      flex: 1;
+      gap: 0.25rem;
+      flex: 1 1 auto;
       min-height: 0;
-      overflow: auto;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
       align-content: start;
       padding: 0 0.15rem;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(248, 250, 252, 0.28) transparent;
+    }
+
+    .nav::-webkit-scrollbar {
+      width: 0.35rem;
+    }
+
+    .nav::-webkit-scrollbar-thumb {
+      background: rgba(248, 250, 252, 0.28);
+      border-radius: 999px;
     }
 
     .nav__label {
@@ -234,12 +255,14 @@ const BRANCH_MANAGER_PATHS = new Set([
       letter-spacing: 0.04em;
       text-transform: uppercase;
       color: rgba(248, 250, 252, 0.35);
+      flex-shrink: 0;
     }
 
     .nav a {
       color: rgba(248, 250, 252, 0.68);
       text-decoration: none;
-      height: 2.5rem;
+      height: 2.85rem;
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       gap: 0.65rem;
@@ -297,6 +320,7 @@ const BRANCH_MANAGER_PATHS = new Set([
       margin-top: auto;
       padding-top: 1rem;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
+      flex-shrink: 0;
     }
 
     .logout {
@@ -304,7 +328,7 @@ const BRANCH_MANAGER_PATHS = new Set([
       border: 0;
       background: rgba(255, 255, 255, 0.06);
       color: rgba(248, 250, 252, 0.8);
-      height: 2.5rem;
+      height: 2.85rem;
       border-radius: 0.6rem;
       font: inherit;
       font-size: 0.875rem;
@@ -438,6 +462,16 @@ const BRANCH_MANAGER_PATHS = new Set([
       background: var(--accent-soft);
       border-color: color-mix(in srgb, var(--accent) 40%, transparent);
       color: var(--accent-strong);
+    }
+
+    .push-err {
+      max-width: 12rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--danger, #b91c1c);
     }
 
     .bell svg {
