@@ -16,6 +16,7 @@ export type ShopInput = {
   status?: UserStatus;
   rejectionReason?: string;
   branchId?: string | null;
+  shopDiscountPercent?: number;
 };
 
 @Injectable({ providedIn: 'root' })

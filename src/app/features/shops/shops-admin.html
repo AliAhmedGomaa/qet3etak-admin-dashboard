@@ -2,7 +2,9 @@
   <header class="shops__header">
     <div>
       <h1>المتاجر</h1>
-      <p>إدارة حسابات المتاجر: إضافة، تعديل، بحث، وتحديث الحالة.</p>
+      <p>
+        إدارة حسابات المتاجر. اضغط على متجر لعرض معاملاته وفواتيره والدين المستحق وتسجيل الدفعات.
+      </p>
     </div>
     <div class="shops__actions">
       <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
@@ -50,6 +52,7 @@
           <th>الجوال</th>
           <th>المدينة</th>
           <th>الفرع</th>
+          <th>الخصم</th>
           <th>الحالة</th>
           <th>التسجيل</th>
           <th></th>
@@ -57,10 +60,10 @@
       </thead>
       <tbody>
         @if (loading()) {
-          <tr><td colspan="8" class="muted">جارٍ التحميل…</td></tr>
+          <tr><td colspan="9" class="muted">جارٍ التحميل…</td></tr>
         } @else if (shops().length === 0) {
           <tr>
-            <td colspan="8" class="muted">
+            <td colspan="9" class="muted">
               {{
                 searchQuery() || statusFilter()
                   ? 'لا توجد نتائج.'
@@ -70,15 +73,24 @@
           </tr>
         } @else {
           @for (shop of shops(); track shop.id) {
-            <tr>
+            <tr class="shop-row" (click)="openDetail(shop)">
               <td>
-                <strong>{{ shop.shopName }}</strong>
+                <a class="shop-link" [routerLink]="['/shops', shop.id]" (click)="$event.stopPropagation()">
+                  <strong>{{ shop.shopName }}</strong>
+                </a>
                 <small class="notes">{{ shop.address }}</small>
               </td>
               <td>{{ shop.fullName }}</td>
               <td dir="ltr">{{ shop.phone }}</td>
               <td>{{ shop.city }}</td>
               <td>{{ branchLabel(shop.branchId) }}</td>
+              <td>
+                @if ((shop.shopDiscountPercent ?? 0) > 0) {
+                  <strong class="discount">{{ shop.shopDiscountPercent }}%</strong>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
               <td>
                 <span
                   class="chip"
@@ -95,7 +107,8 @@
               <td>
                 {{ shop.createdAt ? (shop.createdAt | date: 'mediumDate') : '—' }}
               </td>
-              <td class="row-actions">
+              <td class="row-actions" (click)="$event.stopPropagation()">
+                <a class="btn btn-primary" [routerLink]="['/shops', shop.id]">الحساب</a>
                 @if (shop.commercialRegPhotoUrl) {
                   <button
                     type="button"
@@ -228,6 +241,19 @@
               </select>
             </label>
           }
+          <label>
+            خصم المتجر (%)
+            <input
+              type="number"
+              formControlName="shopDiscountPercent"
+              min="0"
+              max="100"
+              step="0.01"
+              dir="ltr"
+              placeholder="0"
+            />
+            <small class="notes">يُطبَّق على كل أسعار الكتالوج لهذا المتجر بعد أسعار الكميات.</small>
+          </label>
           <label>
             رابط صورة السجل التجاري (اختياري)
             <input formControlName="commercialRegPhotoUrl" dir="ltr" placeholder="/uploads/…" />

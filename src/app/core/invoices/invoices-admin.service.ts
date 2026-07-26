@@ -48,13 +48,14 @@ export class InvoicesAdminService {
   private readonly base = `${environment.apiUrl}/admin/invoices`;
 
   list(
-    params: PageParams & { status?: InvoiceStatus } = {},
+    params: PageParams & { status?: InvoiceStatus; shopId?: string } = {},
   ): Observable<Paginated<AdminInvoice>> {
     let httpParams = new HttpParams();
     if (params.page) httpParams = httpParams.set('page', String(params.page));
     if (params.limit) httpParams = httpParams.set('limit', String(params.limit));
     if (params.q?.trim()) httpParams = httpParams.set('q', params.q.trim());
     if (params.status) httpParams = httpParams.set('status', params.status);
+    if (params.shopId) httpParams = httpParams.set('shopId', params.shopId);
     return this.http.get<Paginated<AdminInvoice>>(this.base, {
       params: httpParams,
     });

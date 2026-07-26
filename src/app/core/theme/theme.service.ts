@@ -1,4 +1,5 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
+import { BrandingService } from '../branding/branding.service';
 
 export type ColorTheme = 'light' | 'dark';
 
@@ -6,6 +7,7 @@ const STORAGE_KEY = 'qet3etak.admin.theme';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
+  private readonly branding = inject(BrandingService);
   readonly theme = signal<ColorTheme>('light');
 
   /** Apply saved preference, or system preference if none saved. */
@@ -50,5 +52,6 @@ export class ThemeService {
     } catch {
       /* ignore quota / private mode */
     }
+    this.branding.reapply();
   }
 }

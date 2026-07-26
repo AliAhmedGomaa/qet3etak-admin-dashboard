@@ -8,6 +8,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { ThemeService } from '../../core/theme/theme.service';
+import { BrandingService } from '../../core/branding/branding.service';
 
 @Component({
   selector: 'app-admin-login',
@@ -18,8 +19,8 @@ import { ThemeService } from '../../core/theme/theme.service';
         {{ theme.theme() === 'dark' ? '☀ فاتح' : '☾ داكن' }}
       </button>
       <div class="login__card">
-        <h1>قطع غيار · الإدارة</h1>
-        <p>سجّل الدخول لمراجعة المتاجر والمخزون والطلبات</p>
+        <h1>{{ branding.branding().appName }} · الإدارة</h1>
+        <p>{{ branding.branding().tagline || 'سجّل الدخول لمراجعة المتاجر والمخزون والطلبات' }}</p>
         @if (expired()) {
           <p class="notice">انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى.</p>
         }
@@ -106,6 +107,7 @@ export class AdminLogin {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   protected readonly theme = inject(ThemeService);
+  protected readonly branding = inject(BrandingService);
 
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);

@@ -1,0 +1,293 @@
+.shop-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 1.5rem;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.back {
+  color: #334155;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.back:hover {
+  color: #0d9a6a;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+
+.sub {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+}
+
+.addr {
+  margin: 0.25rem 0 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.stat {
+  padding: 1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.stat--debt {
+  background: linear-gradient(145deg, #ecfdf5, #fff);
+  border-color: #a7f3d0;
+}
+
+.stat__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.stat strong {
+  font-size: 1.25rem;
+  color: #0f172a;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1.1rem 1.2rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.products-cell {
+  max-width: 18rem;
+}
+
+.products-cell span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.4rem;
+  font-size: 0.82rem;
+  color: #334155;
+  line-height: 1.35;
+}
+
+.products-cell span + span {
+  margin-top: 0.25rem;
+}
+
+.products-cell small {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.products-cell .price {
+  margin-inline-start: auto;
+  color: #0f172a;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.muted-inline {
+  color: #94a3b8;
+}
+
+.hint {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.payment__form {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.payment__form label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.payment__form input {
+  min-height: 2.6rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.7rem;
+  font: inherit;
+}
+
+.table-wrap {
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+th,
+td {
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: start;
+}
+
+th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+}
+
+.chip {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  background: #d1fae5;
+  color: #065f46;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chip--sm {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.7rem;
+}
+
+.chip--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.chip--off {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.chip--suspended {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.neg {
+  color: #0d9a6a;
+  font-weight: 700;
+}
+
+.link {
+  color: #0d9a6a;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.btn {
+  min-height: 2.6rem;
+  padding: 0 0.95rem;
+  border-radius: 0.65rem;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: #10b880;
+  border-color: #10b880;
+  color: #fff;
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: #fff;
+  color: #334155;
+}
+
+.err {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.ok {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.muted {
+  color: #94a3b8;
+  text-align: center;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .payment__form {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    flex-direction: column;
+  }
+}

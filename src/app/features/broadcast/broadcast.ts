@@ -174,7 +174,16 @@ type BroadcastResult = {
     </section>
   `,
   styles: `
-    .broadcast { display: grid; gap: 1.1rem; }
+    .broadcast {
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding-bottom: 1rem;
+    }
+    header { flex-shrink: 0; }
     header h1 { margin: 0; font-size: 1.45rem; }
     header p { margin: 0.35rem 0 0; color: #64748b; max-width: 42rem; line-height: 1.5; }
     .layout {

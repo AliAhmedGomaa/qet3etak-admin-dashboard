@@ -1,0 +1,276 @@
+<section class="emp-detail" dir="rtl">
+  <div class="toolbar">
+    <a routerLink="/employees" class="back">← الموظفون</a>
+    <label class="month">
+      الشهر
+      <input
+        type="month"
+        [value]="month()"
+        (change)="onMonthChange($any($event.target).value)"
+      />
+    </label>
+    <button type="button" class="btn btn-ghost" (click)="reload()">تحديث</button>
+  </div>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="muted">جارٍ التحميل…</p>
+  } @else if (employee(); as emp) {
+    <header class="hero">
+      <div>
+        <h1>{{ emp.fullName }}</h1>
+        <p class="sub">
+          {{ emp.jobTitle || 'بدون وظيفة' }} · <span dir="ltr">{{ emp.phone }}</span>
+        </p>
+        <p class="addr">
+          التعيين: {{ emp.hireDate ? (emp.hireDate | date: 'mediumDate') : '—' }}
+          · سعر الساعة {{ emp.hourlyRate | currency: 'EGP':'symbol-narrow':'1.0-2' }}
+          · يوم العمل {{ emp.standardDailyHours }} ساعة
+        </p>
+      </div>
+      <span
+        class="chip"
+        [class.chip--off]="emp.status === 'TERMINATED'"
+        [class.chip--pending]="emp.status === 'ON_LEAVE'"
+      >
+        {{ statusLabel(emp.status) }}
+      </span>
+    </header>
+
+    <div class="stats">
+      <article class="stat">
+        <span class="stat__label">ساعات {{ month() }}</span>
+        <strong>{{ emp.hoursWorkedThisMonth ?? 0 }}</strong>
+      </article>
+      <article class="stat">
+        <span class="stat__label">الأساسي (ساعات × سعر)</span>
+        <strong>{{ (emp.baseAmount ?? 0) | currency: 'EGP':'symbol-narrow':'1.0-2' }}</strong>
+      </article>
+      <article class="stat stat--pay">
+        <span class="stat__label">المستحق / المصروف</span>
+        <strong>{{ (emp.expectedPay ?? 0) | currency: 'EGP':'symbol-narrow':'1.0-2' }}</strong>
+        <small>{{ emp.salaryPaidThisMonth ? 'تم الصرف' : 'لم يُصرف بعد' }}</small>
+      </article>
+      <article class="stat">
+        <span class="stat__label">رصيد الإجازة</span>
+        <strong>{{ emp.vacationDaysRemaining ?? 0 }} / {{ emp.annualLeaveDays }}</strong>
+      </article>
+    </div>
+
+    <section class="card">
+      <h2>المكافآت والخصومات — {{ month() }}</h2>
+      <div class="inline-form">
+        <label>
+          النوع
+          <select [(ngModel)]="adjType">
+            <option value="BONUS">مكافأة</option>
+            <option value="DEDUCTION">خصم</option>
+          </select>
+        </label>
+        <label>
+          المبلغ
+          <input type="number" min="0.01" step="0.01" [(ngModel)]="adjAmount" />
+        </label>
+        <label>
+          ملاحظة
+          <input type="text" [(ngModel)]="adjNote" />
+        </label>
+        <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="addAdjustment()">
+          إضافة
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>النوع</th>
+              <th>المبلغ</th>
+              <th>ملاحظة</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of adjustments(); track a.id) {
+              <tr>
+                <td>{{ a.type === 'BONUS' ? 'مكافأة' : 'خصم' }}</td>
+                <td>{{ a.amount | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+                <td>{{ a.note || '—' }}</td>
+                <td>
+                  <button type="button" class="btn btn-ghost" (click)="removeAdjustment(a.id)">حذف</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4" class="muted">لا توجد مكافآت أو خصومات لهذا الشهر.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="hint">
+        عند صرف الراتب تُحتسب تلقائياً (إجمالي المكافآت − إجمالي الخصومات) ما لم تُدخل قيماً يدوياً في نموذج الصرف.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>صرف الراتب — {{ month() }}</h2>
+      @if (emp.salaryPaidThisMonth) {
+        <p class="ok">
+          تم صرف
+          {{ (emp.payment?.amount ?? emp.expectedPay ?? 0) | currency: 'EGP':'symbol-narrow':'1.2-2' }}
+          @if (emp.payment) {
+            (أساسي {{ emp.payment.baseAmount | currency: 'EGP':'symbol-narrow':'1.0-2' }}
+            + مكافأة {{ emp.payment.bonus | currency: 'EGP':'symbol-narrow':'1.0-2' }}
+            − خصم {{ emp.payment.deduction | currency: 'EGP':'symbol-narrow':'1.0-2' }})
+          }
+        </p>
+        <button type="button" class="btn btn-danger" [disabled]="busy()" (click)="unpaySalary()">
+          إلغاء الصرف وحذف المصروف
+        </button>
+      } @else {
+        <div class="pay-form">
+          <label>
+            مكافأة
+            <input type="number" min="0" step="0.01" [(ngModel)]="payBonus" />
+          </label>
+          <label>
+            خصم
+            <input type="number" min="0" step="0.01" [(ngModel)]="payDeduction" />
+          </label>
+          <label>
+            ملاحظة
+            <input type="text" [(ngModel)]="payNote" placeholder="اختياري" />
+          </label>
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="busy() || emp.status === 'TERMINATED'"
+            (click)="paySalary()"
+          >
+            {{ busy() ? 'جارٍ الصرف…' : 'تسجيل صرف الراتب' }}
+          </button>
+        </div>
+        <p class="hint">
+          سيتم إنشاء مصروف «رواتب» تلقائياً في التحليلات المالية.
+          الصافي ≈ {{ emp.baseAmount ?? 0 }} + مكافأة − خصم.
+        </p>
+      }
+    </section>
+
+    <section class="card">
+      <h2>الحضور — {{ month() }}</h2>
+      <div class="inline-form">
+        <label>
+          التاريخ
+          <input type="date" [(ngModel)]="attDate" />
+        </label>
+        <label>
+          الساعات
+          <input type="number" min="0" step="0.5" [(ngModel)]="attHours" />
+        </label>
+        <label>
+          ملاحظة
+          <input type="text" [(ngModel)]="attNote" />
+        </label>
+        <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="saveAttendance()">
+          حفظ يوم
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>الساعات</th>
+              <th>ملاحظة</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (day of attendance(); track day.id) {
+              <tr>
+                <td>{{ day.date | date: 'mediumDate' }}</td>
+                <td>{{ day.hours }}</td>
+                <td>{{ day.note || '—' }}</td>
+                <td>
+                  <button type="button" class="btn btn-ghost" (click)="removeAttendance(day)">حذف</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4" class="muted">لا يوجد حضور مسجّل لهذا الشهر.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>الإجازات</h2>
+      <div class="inline-form">
+        <label>
+          من
+          <input type="date" [(ngModel)]="vacFrom" />
+        </label>
+        <label>
+          إلى
+          <input type="date" [(ngModel)]="vacTo" />
+        </label>
+        <label>
+          النوع
+          <select [(ngModel)]="vacType">
+            <option value="ANNUAL">سنوية</option>
+            <option value="SICK">مرضية</option>
+            <option value="UNPAID">بدون راتب</option>
+          </select>
+        </label>
+        <label>
+          السبب
+          <input type="text" [(ngModel)]="vacReason" />
+        </label>
+        <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="createVacation()">
+          طلب إجازة
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الفترة</th>
+              <th>الأيام</th>
+              <th>النوع</th>
+              <th>الحالة</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (v of vacations(); track v.id) {
+              <tr>
+                <td>{{ v.from | date: 'mediumDate' }} → {{ v.to | date: 'mediumDate' }}</td>
+                <td>{{ v.days }}</td>
+                <td>{{ vacationTypeLabel(v.type) }}</td>
+                <td>
+                  <span
+                    class="chip chip--sm"
+                    [class.chip--pending]="v.status === 'PENDING'"
+                    [class.chip--off]="v.status === 'REJECTED'"
+                  >
+                    {{ vacationStatusLabel(v.status) }}
+                  </span>
+                </td>
+                <td class="row-actions">
+                  @if (v.status === 'PENDING') {
+                    <button type="button" class="btn btn-primary" (click)="reviewVacation(v.id, 'APPROVED')">قبول</button>
+                    <button type="button" class="btn btn-ghost" (click)="reviewVacation(v.id, 'REJECTED')">رفض</button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="muted">لا توجد طلبات إجازة.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</section>

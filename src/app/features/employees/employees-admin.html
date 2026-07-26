@@ -1,0 +1,177 @@
+<section class="employees" dir="rtl">
+  <header class="employees__header">
+    <div>
+      <h1>الموظفون</h1>
+      <p>إدارة الرواتب، الحضور، الإجازات، وصرف الراتب الشهري.</p>
+    </div>
+    <div class="employees__actions">
+      <label class="month">
+        الشهر
+        <input
+          type="month"
+          [value]="month()"
+          (change)="onMonthChange($any($event.target).value)"
+        />
+      </label>
+      <button type="button" class="btn btn-ghost" (click)="load()">تحديث</button>
+      <button type="button" class="btn btn-primary" (click)="openCreate()">إضافة موظف</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  <div class="toolbar">
+    <label class="search">
+      <input
+        type="search"
+        [value]="searchDraft"
+        (input)="onSearchInput($any($event.target).value)"
+        placeholder="ابحث بالاسم أو الجوال أو الوظيفة…"
+      />
+    </label>
+    <div class="filters">
+      @for (opt of statusOptions; track opt.value) {
+        <button
+          type="button"
+          class="filter"
+          [class.filter--on]="statusFilter() === opt.value"
+          (click)="setStatusFilter(opt.value)"
+        >
+          {{ opt.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>الموظف</th>
+          <th>الوظيفة</th>
+          <th>سعر الساعة</th>
+          <th>ساعات الشهر</th>
+          <th>المستحق</th>
+          <th>الصرف</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="8" class="muted">جارٍ التحميل…</td></tr>
+        } @else if (employees().length === 0) {
+          <tr><td colspan="8" class="muted">لا يوجد موظفون بعد.</td></tr>
+        } @else {
+          @for (emp of employees(); track emp.id) {
+            <tr>
+              <td>
+                <a class="name-link" [routerLink]="['/employees', emp.id]" [queryParams]="{ month: month() }">
+                  <strong>{{ emp.fullName }}</strong>
+                </a>
+                <small dir="ltr">{{ emp.phone }}</small>
+              </td>
+              <td>{{ emp.jobTitle || '—' }}</td>
+              <td>{{ emp.hourlyRate | currency: 'EGP':'symbol-narrow':'1.0-2' }}</td>
+              <td>{{ emp.hoursWorkedThisMonth ?? 0 }}</td>
+              <td>{{ (emp.expectedPay ?? 0) | currency: 'EGP':'symbol-narrow':'1.0-2' }}</td>
+              <td>
+                <span class="chip" [class.chip--paid]="emp.salaryPaidThisMonth" [class.chip--due]="!emp.salaryPaidThisMonth">
+                  {{ emp.salaryPaidThisMonth ? 'مصروف' : 'لم يُصرف' }}
+                </span>
+              </td>
+              <td>
+                <span
+                  class="chip"
+                  [class.chip--off]="emp.status === 'TERMINATED'"
+                  [class.chip--pending]="emp.status === 'ON_LEAVE'"
+                >
+                  {{ statusLabel(emp.status) }}
+                </span>
+              </td>
+              <td class="row-actions">
+                <a class="btn btn-primary" [routerLink]="['/employees', emp.id]" [queryParams]="{ month: month() }">التفاصيل</a>
+                <button type="button" class="btn btn-ghost" (click)="openEdit(emp)">تعديل</button>
+                @if (emp.status !== 'TERMINATED') {
+                  <button type="button" class="btn btn-danger" (click)="askTerminate(emp)">إنهاء</button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-admin-pager
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [total]="total()"
+    [limit]="20"
+    itemLabel="موظف"
+    ariaLabel="صفحات الموظفين"
+    (pageChange)="goPage($event)"
+  />
+
+  @if (editorOpen()) {
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal__card">
+        <header>
+          <h2>{{ editingId() ? 'تعديل موظف' : 'إضافة موظف' }}</h2>
+          <button type="button" class="btn btn-ghost" (click)="closeEditor()">إغلاق</button>
+        </header>
+        <form [formGroup]="form" (ngSubmit)="save()">
+          <div class="grid">
+            <label>الاسم<input formControlName="fullName" /></label>
+            <label>الجوال<input formControlName="phone" dir="ltr" /></label>
+            <label>الوظيفة<input formControlName="jobTitle" /></label>
+            <label>سعر الساعة<input type="number" min="0" step="0.01" formControlName="hourlyRate" /></label>
+            <label>ساعات اليوم الافتراضية<input type="number" min="0" step="0.5" formControlName="standardDailyHours" /></label>
+            <label>رصيد الإجازة السنوية<input type="number" min="0" formControlName="annualLeaveDays" /></label>
+            <label>
+              الحالة
+              <select formControlName="status">
+                <option value="ACTIVE">نشط</option>
+                <option value="ON_LEAVE">في إجازة</option>
+                <option value="TERMINATED">منتهي</option>
+              </select>
+            </label>
+            <label>تاريخ التعيين<input type="date" formControlName="hireDate" /></label>
+            <label>
+              كلمة مرور بوابة الموظف
+              <input
+                type="password"
+                formControlName="password"
+                dir="ltr"
+                [placeholder]="editingId() ? 'اتركها فارغة للإبقاء' : 'مطلوبة'"
+              />
+            </label>
+          </div>
+          <label>ملاحظات<textarea rows="2" formControlName="notes"></textarea></label>
+          <footer>
+            <button type="button" class="btn btn-ghost" (click)="closeEditor()">إلغاء</button>
+            <button type="submit" class="btn btn-primary" [disabled]="saving()">
+              {{ saving() ? 'جارٍ الحفظ…' : 'حفظ' }}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  }
+
+  <app-confirm-dialog
+    [open]="!!terminateTarget()"
+    title="إنهاء خدمة الموظف؟"
+    [message]="
+      terminateTarget()
+        ? 'سيتم تعيين حالة «' + terminateTarget()!.fullName + '» إلى منتهي ولن يظهر في كشف الرواتب النشط.'
+        : ''
+    "
+    confirmLabel="إنهاء"
+    [busy]="terminating()"
+    (confirmed)="confirmTerminate()"
+    (cancelled)="cancelTerminate()"
+  />
+</section>

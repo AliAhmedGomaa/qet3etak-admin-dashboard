@@ -1,0 +1,271 @@
+.emp-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 1.5rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.back {
+  color: #334155;
+  font-weight: 700;
+  text-decoration: none;
+  margin-inline-end: auto;
+}
+
+.back:hover {
+  color: #0d9a6a;
+}
+
+.month {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.month input {
+  min-height: 2.4rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.65rem;
+  padding: 0.35rem 0.6rem;
+  font: inherit;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.sub {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+}
+
+.addr {
+  margin: 0.25rem 0 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.stat {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.stat--pay {
+  background: linear-gradient(145deg, #ecfdf5, #fff);
+  border-color: #a7f3d0;
+}
+
+.stat__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.stat strong {
+  font-size: 1.15rem;
+}
+
+.stat small {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1.1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.hint {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.pay-form,
+.inline-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  align-items: end;
+}
+
+.pay-form label,
+.inline-form label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.pay-form input,
+.inline-form input,
+.inline-form select {
+  min-height: 2.5rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.65rem;
+  padding: 0.4rem 0.65rem;
+  font: inherit;
+}
+
+.table-wrap {
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+th,
+td {
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: start;
+}
+
+th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  background: #d1fae5;
+  color: #065f46;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.chip--sm {
+  padding: 0.25rem 0.55rem;
+}
+
+.chip--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.chip--off {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.btn {
+  min-height: 2.5rem;
+  padding: 0 0.9rem;
+  border-radius: 0.65rem;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: #10b880;
+  border-color: #10b880;
+  color: #fff;
+}
+
+.btn-primary:disabled,
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  color: #334155;
+}
+
+.btn-danger {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.err {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.ok {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.muted {
+  color: #94a3b8;
+  text-align: center;
+  margin: 0;
+}
+
+@media (max-width: 960px) {
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pay-form,
+  .inline-form {
+    grid-template-columns: 1fr;
+  }
+}

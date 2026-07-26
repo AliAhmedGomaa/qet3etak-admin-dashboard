@@ -12,6 +12,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { ShopUser, UserStatus } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { ShopsAdminService } from '../../core/shops/shops-admin.service';
@@ -29,7 +30,7 @@ const STATUS_LABELS: Record<UserStatus, string> = {
 
 @Component({
   selector: 'app-shops-admin',
-  imports: [ReactiveFormsModule, DatePipe, ConfirmDialog, AdminPager],
+  imports: [ReactiveFormsModule, DatePipe, ConfirmDialog, AdminPager, RouterLink],
   templateUrl: './shops-admin.html',
   styleUrl: './shops-admin.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,6 +40,7 @@ export class ShopsAdmin implements OnInit {
   private readonly api = inject(ShopsAdminService);
   private readonly branchesApi = inject(BranchesAdminService);
   private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   protected readonly isSuperAdmin = computed(
     () => this.auth.user()?.role === 'ADMIN',
@@ -83,6 +85,7 @@ export class ShopsAdmin implements OnInit {
     status: this.fb.nonNullable.control<UserStatus>('APPROVED'),
     rejectionReason: [''],
     branchId: [''],
+    shopDiscountPercent: [0, [Validators.min(0), Validators.max(100)]],
   });
 
   protected readonly photoUrl = (path: string) => this.api.photoUrl(path);
@@ -102,6 +105,10 @@ export class ShopsAdmin implements OnInit {
 
   protected statusLabel(status: UserStatus): string {
     return STATUS_LABELS[status] ?? status;
+  }
+
+  protected openDetail(shop: ShopUser): void {
+    void this.router.navigate(['/shops', shop.id]);
   }
 
   protected load(): void {
@@ -178,6 +185,7 @@ export class ShopsAdmin implements OnInit {
       status: 'APPROVED',
       rejectionReason: '',
       branchId: '',
+      shopDiscountPercent: 0,
     });
     this.form.controls.password.setValidators([
       Validators.required,
@@ -200,6 +208,7 @@ export class ShopsAdmin implements OnInit {
       status: shop.status,
       rejectionReason: shop.rejectionReason || '',
       branchId: shop.branchId || '',
+      shopDiscountPercent: shop.shopDiscountPercent ?? 0,
     });
     this.form.controls.password.clearValidators();
     this.form.controls.password.setValidators([Validators.minLength(6)]);
@@ -251,6 +260,7 @@ export class ShopsAdmin implements OnInit {
           ? value.rejectionReason.trim()
           : undefined,
       branchId: value.branchId.trim() || null,
+      shopDiscountPercent: Number(value.shopDiscountPercent) || 0,
       ...(value.password.trim()
         ? { password: value.password.trim() }
         : {}),

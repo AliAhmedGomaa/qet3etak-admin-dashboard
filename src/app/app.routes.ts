@@ -27,6 +27,11 @@ export const routes: Routes = [
           import('./features/shops/shops-admin').then((m) => m.ShopsAdmin),
       },
       {
+        path: 'shops/:id',
+        loadComponent: () =>
+          import('./features/shops/shop-detail').then((m) => m.ShopDetail),
+      },
+      {
         path: 'users',
         canActivate: [superAdminGuard],
         loadComponent: () =>
@@ -121,6 +126,27 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'employees',
+        loadComponent: () =>
+          import('./features/employees/employees-admin').then(
+            (m) => m.EmployeesAdmin,
+          ),
+      },
+      {
+        path: 'employees/vacations',
+        loadComponent: () =>
+          import('./features/employees/vacation-inbox').then(
+            (m) => m.VacationInbox,
+          ),
+      },
+      {
+        path: 'employees/:id',
+        loadComponent: () =>
+          import('./features/employees/employee-detail').then(
+            (m) => m.EmployeeDetail,
+          ),
+      },
+      {
         path: 'special-requests',
         loadComponent: () =>
           import('./features/special-requests/special-requests-center').then(
@@ -141,6 +167,14 @@ export const routes: Routes = [
         path: 'chat',
         loadComponent: () =>
           import('./features/chat/chat-center').then((m) => m.ChatCenter),
+      },
+      {
+        path: 'branding',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./features/settings/branding-settings').then(
+            (m) => m.BrandingSettings,
+          ),
       },
     ],
   },

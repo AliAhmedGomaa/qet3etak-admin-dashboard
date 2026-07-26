@@ -28,6 +28,8 @@ export interface ShopUser {
   roleName?: string;
   rejectionReason?: string;
   branchId?: string | null;
+  /** Shop-specific catalog discount percent (0–100). */
+  shopDiscountPercent?: number;
   createdAt?: string;
 }
 

@@ -31,6 +31,10 @@ export interface Expense {
   amount: number;
   date: string;
   description: string;
+  source?: 'MANUAL' | 'PAYROLL';
+  employeeId?: string;
+  employeeName?: string;
+  payrollMonth?: string;
   createdAt?: string;
 }
 

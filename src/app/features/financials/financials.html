@@ -118,6 +118,19 @@
                 <div>
                   <strong>{{ categoryLabel(e.category) }}</strong>
                   <small>{{ e.description || '—' }}</small>
+                  @if (e.employeeName || e.payrollMonth) {
+                    <small class="payroll-meta">
+                      @if (e.employeeName) {
+                        موظف: {{ e.employeeName }}
+                      }
+                      @if (e.payrollMonth) {
+                        · شهر {{ e.payrollMonth }}
+                      }
+                      @if (e.source === 'PAYROLL') {
+                        · من الرواتب
+                      }
+                    </small>
+                  }
                   <time>{{ e.date | date: 'y/MM/dd' }}</time>
                 </div>
                 <div class="exp-list__end">

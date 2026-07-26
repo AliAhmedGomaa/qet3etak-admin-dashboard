@@ -1,0 +1,251 @@
+<section class="shop-detail" dir="rtl">
+  <div class="toolbar">
+    <a routerLink="/shops" class="back">← المتاجر</a>
+    <button type="button" class="btn btn-ghost" (click)="reloadAll()">تحديث</button>
+  </div>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="muted">جارٍ التحميل…</p>
+  } @else if (shop(); as s) {
+    <header class="hero">
+      <div>
+        <h1>{{ s.shopName }}</h1>
+        <p class="sub">
+          {{ s.fullName }} · <span dir="ltr">{{ s.phone }}</span> · {{ s.city }}
+        </p>
+        <p class="addr">{{ s.address }}</p>
+        <p class="addr">
+          تاريخ التسجيل:
+          {{ s.createdAt ? (s.createdAt | date: 'mediumDate') : '—' }}
+          @if (s.rejectionReason) {
+            · سبب الرفض: {{ s.rejectionReason }}
+          }
+        </p>
+        <p class="addr">
+          خصم المتجر:
+          <strong>{{ s.shopDiscountPercent ?? 0 }}%</strong>
+        </p>
+      </div>
+      <span
+        class="chip"
+        [class.chip--pending]="s.status === 'PENDING_VERIFICATION'"
+        [class.chip--off]="s.status === 'REJECTED'"
+        [class.chip--suspended]="s.status === 'SUSPENDED'"
+      >
+        {{ statusLabel(s.status) }}
+      </span>
+    </header>
+
+    <section class="card discount-card">
+      <h2>خصم المتجر</h2>
+      <p class="hint">
+        نسبة مئوية تُخصم من أسعار الكتالوج لهذا المتجر فقط (بعد أسعار الكميات).
+      </p>
+      @if (discountError()) {
+        <p class="err">{{ discountError() }}</p>
+      }
+      @if (discountSuccess()) {
+        <p class="ok">{{ discountSuccess() }}</p>
+      }
+      <div class="payment__form">
+        <label>
+          نسبة الخصم (%)
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            dir="ltr"
+            [(ngModel)]="discountDraft"
+          />
+        </label>
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="discountBusy()"
+          (click)="saveDiscount()"
+        >
+          {{ discountBusy() ? 'جارٍ الحفظ…' : 'حفظ الخصم' }}
+        </button>
+      </div>
+    </section>
+
+    @if (wallet(); as w) {
+      <div class="stats">
+        <article class="stat stat--debt">
+          <span class="stat__label">المبلغ المستحق من المتجر</span>
+          <strong>{{ w.currentDebt | currency: 'EGP':'symbol-narrow':'1.2-2' }}</strong>
+        </article>
+        <article class="stat">
+          <span class="stat__label">حد الائتمان</span>
+          <strong>{{ w.creditLimit | currency: 'EGP':'symbol-narrow':'1.2-2' }}</strong>
+        </article>
+        <article class="stat">
+          <span class="stat__label">المتاح</span>
+          <strong>{{ w.availableCredit | currency: 'EGP':'symbol-narrow':'1.2-2' }}</strong>
+        </article>
+      </div>
+
+      <section class="card payment">
+        <h2>تسجيل دفعة من المتجر</h2>
+        <p class="hint">
+          سجّل مبلغاً دفعه المتجر جزئياً أو كلياً مقابل الدين المستحق
+          ({{ w.currentDebt | currency: 'EGP':'symbol-narrow':'1.2-2' }}).
+        </p>
+        @if (paymentError()) {
+          <p class="err">{{ paymentError() }}</p>
+        }
+        @if (paymentSuccess()) {
+          <p class="ok">{{ paymentSuccess() }}</p>
+        }
+        <div class="payment__form">
+          <label>
+            المبلغ المدفوع
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              [(ngModel)]="paymentDraft"
+              [max]="w.currentDebt"
+              placeholder="مثال: 500"
+            />
+          </label>
+          <label>
+            ملاحظة (اختياري)
+            <input type="text" [(ngModel)]="paymentNote" placeholder="نقداً / تحويل / …" />
+          </label>
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="paymentBusy() || w.currentDebt <= 0"
+            (click)="savePayment()"
+          >
+            {{ paymentBusy() ? 'جارٍ التسجيل…' : 'تأكيد استلام الدفعة' }}
+          </button>
+        </div>
+        @if (w.currentDebt <= 0) {
+          <p class="muted">لا يوجد دين مستحق على هذا المتجر حالياً.</p>
+        }
+      </section>
+
+      <section class="card">
+        <h2>المعاملات</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>النوع</th>
+                <th>المبلغ</th>
+                <th>الرصيد بعده</th>
+                <th>ملاحظة</th>
+                <th>التاريخ</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (tx of w.transactions; track tx.id || $index) {
+                <tr>
+                  <td>{{ txTypeLabel(tx.type) }}</td>
+                  <td [class.neg]="tx.amount < 0">
+                    {{ tx.amount | currency: 'EGP':'symbol-narrow':'1.2-2' }}
+                  </td>
+                  <td>{{ tx.balanceAfter | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+                  <td>{{ tx.note || '—' }}</td>
+                  <td>
+                    {{ tx.createdAt ? (tx.createdAt | date: 'short') : '—' }}
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="muted">لا توجد معاملات بعد.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (txTotalPages() > 1) {
+          <app-admin-pager
+            [page]="txPage()"
+            [totalPages]="txTotalPages()"
+            [limit]="20"
+            itemLabel="معاملة"
+            ariaLabel="صفحات المعاملات"
+            (pageChange)="goTxPage($event)"
+          />
+        }
+      </section>
+    }
+
+    <section class="card">
+      <h2>الفواتير</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>رقم الفاتورة</th>
+              <th>الطلب</th>
+              <th>المنتجات</th>
+              <th>الإجمالي</th>
+              <th>طريقة الدفع</th>
+              <th>الحالة</th>
+              <th>التاريخ</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (inv of invoices(); track inv.id) {
+              <tr>
+                <td><strong>{{ inv.invoiceNumber }}</strong></td>
+                <td>{{ inv.orderNumber }}</td>
+                <td class="products-cell">
+                  @for (line of inv.items; track $index) {
+                    <span>
+                      {{ line.title }}
+                      @if (line.quantity > 1) {
+                        <small>×{{ line.quantity }}</small>
+                      }
+                      <small class="price">
+                        {{ line.lineTotal | currency: 'EGP':'symbol-narrow':'1.0-2' }}
+                      </small>
+                    </span>
+                  } @empty {
+                    <span class="muted-inline">—</span>
+                  }
+                </td>
+                <td>{{ inv.total | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+                <td>{{ paymentLabel(inv.paymentMethod) }}</td>
+                <td>
+                  <span
+                    class="chip chip--sm"
+                    [class.chip--off]="inv.status === 'VOID'"
+                    [class.chip--pending]="inv.status === 'ISSUED'"
+                  >
+                    {{ invoiceStatusLabel(inv.status) }}
+                  </span>
+                </td>
+                <td>{{ inv.issuedAt | date: 'mediumDate' }}</td>
+                <td>
+                  <a class="link" [routerLink]="['/invoices', inv.id]">عرض</a>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="8" class="muted">لا توجد فواتير لهذا المتجر.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (invTotalPages() > 1) {
+        <app-admin-pager
+          [page]="invPage()"
+          [totalPages]="invTotalPages()"
+          [total]="invTotal()"
+          [limit]="20"
+          itemLabel="فاتورة"
+          ariaLabel="صفحات الفواتير"
+          (pageChange)="goInvPage($event)"
+        />
+      }
+    </section>
+  }
+</section>
