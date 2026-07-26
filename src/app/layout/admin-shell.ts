@@ -619,6 +619,7 @@ export class AdminShell implements OnInit {
     this.chat.loadConversations().subscribe();
     this.returns.startWatching();
     this.hr.startWatchingVacations();
+    this.push.listenForPush();
 
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))

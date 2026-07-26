@@ -6,21 +6,31 @@ import { environment } from '../../../environments/environment';
 
 const ENABLED_KEY = 'qet3etak.admin.push.enabled';
 
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PushNotificationService {
   private readonly http = inject(HttpClient);
-  /** Optional — only available when `provideServiceWorker` is registered. */
   private readonly swPush = inject(SwPush, { optional: true });
 
   readonly enabled = signal(this.readEnabled());
   readonly supported = signal(this.isPushSupported());
   readonly busy = signal(false);
   readonly lastError = signal<string | null>(null);
+  private listening = false;
 
   async enable(): Promise<boolean> {
     this.busy.set(true);
     this.lastError.set(null);
     this.supported.set(this.isPushSupported());
+    this.listenForPush();
     console.info('[push:admin] enable start', {
       supported: this.supported(),
       swPush: !!this.swPush,
@@ -29,12 +39,27 @@ export class PushNotificationService {
         typeof Notification !== 'undefined' ? Notification.permission : 'n/a',
     });
     try {
-      if (!this.swPush || !this.swPush.isEnabled) {
+      if (!this.isPushSupported()) {
         this.lastError.set(
           'خدمة الإشعارات غير مفعّلة (استخدم نسخة الإنتاج / HTTPS)',
         );
-        console.warn('[push:admin] enable aborted — SW not enabled');
         return false;
+      }
+
+      const ready = await navigator.serviceWorker.ready;
+      if (!ready) {
+        this.lastError.set(
+          'خدمة الإشعارات غير مفعّلة (استخدم نسخة الإنتاج / HTTPS)',
+        );
+        return false;
+      }
+
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) {
+        const script = reg.active?.scriptURL || reg.waiting?.scriptURL || '';
+        if (script && !script.includes('push-sw.js')) {
+          await reg.unregister();
+        }
       }
 
       const permission = await Notification.requestPermission();
@@ -51,11 +76,23 @@ export class PushNotificationService {
         return false;
       }
 
-      const sub = await this.swPush.requestSubscription({
-        serverPublicKey: key,
+      const existing = await ready.pushManager.getSubscription();
+      if (existing) {
+        try {
+          await existing.unsubscribe();
+        } catch {
+          /* ignore */
+        }
+      }
+
+      const sub = await ready.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(key) as BufferSource,
       });
       const json = sub.toJSON();
-      if (!json.endpoint || !json.keys?.['p256dh'] || !json.keys?.['auth']) {
+      const p256dh = json.keys?.['p256dh'];
+      const auth = json.keys?.['auth'];
+      if (!json.endpoint || !p256dh || !auth) {
         this.lastError.set('تعذر إنشاء اشتراك الإشعارات في المتصفح');
         console.warn('[push:admin] incomplete subscription JSON', json);
         return false;
@@ -69,16 +106,52 @@ export class PushNotificationService {
             return 'invalid';
           }
         })(),
+        p256dhLen: p256dh.length,
+        authLen: auth.length,
       });
-      await firstValueFrom(
-        this.http.post(`${environment.apiUrl}/admin/push/subscribe`, {
+      const saved = await firstValueFrom(
+        this.http.post<{
+          confirmationSent?: number;
+          tickleSent?: number;
+        }>(`${environment.apiUrl}/admin/push/subscribe`, {
           endpoint: json.endpoint,
-          keys: json.keys,
+          keys: { p256dh, auth },
         }),
       );
+      console.info('[push:admin] subscribe response', saved);
       this.enabled.set(true);
       localStorage.setItem(ENABLED_KEY, '1');
-      console.info('[push:admin] enable OK');
+
+      ready.active?.postMessage({
+        type: 'SHOW_LOCAL',
+        title: 'اختبار Service Worker',
+        body: 'إذا رأيت هذا، فـ showNotification من الـ SW يعمل',
+        tag: `sw-selftest-admin-${Date.now()}`,
+        data: { url: '/reports' },
+      });
+
+      this.startInboxPolling();
+      void this.pullInbox();
+
+      const serverNote = `السيرفر: tickle=${saved.tickleSent ?? 0} تأكيد=${saved.confirmationSent ?? 0}`;
+      console.info('[push:admin] enable OK', serverNote);
+      this.lastError.set(
+        (saved.tickleSent || saved.confirmationSent)
+          ? `تم الإرسال من السيرفر (${serverNote}). إن لم يظهر، افحص إشعارات Chrome في إعدادات النظام.`
+          : `السيرفر لم يرسل (${serverNote}).`,
+      );
+
+      try {
+        new Notification('تم تفعيل الإشعارات', {
+          body: serverNote,
+          tag: `local-welcome-admin-${Date.now()}`,
+          dir: 'rtl',
+          lang: 'ar',
+        });
+      } catch (err) {
+        console.warn('[push:admin] local Notification failed', err);
+      }
+
       return true;
     } catch (err) {
       this.lastError.set(this.formatError(err));
@@ -90,21 +163,23 @@ export class PushNotificationService {
   }
 
   async disable(): Promise<void> {
-    if (!this.swPush) {
-      this.enabled.set(false);
-      localStorage.removeItem(ENABLED_KEY);
-      return;
-    }
-
     this.busy.set(true);
     try {
-      const sub = await firstValueFrom(this.swPush.subscription);
+      const ready = await navigator.serviceWorker.ready.catch(() => null);
+      const sub = await ready?.pushManager.getSubscription();
       await firstValueFrom(
         this.http.delete(`${environment.apiUrl}/admin/push/subscribe`, {
           body: { endpoint: sub?.endpoint },
         }),
-      );
-      await this.swPush.unsubscribe();
+      ).catch(() => undefined);
+      await sub?.unsubscribe();
+      if (this.swPush) {
+        try {
+          await this.swPush.unsubscribe();
+        } catch {
+          /* ignore */
+        }
+      }
     } catch {
       /* ignore */
     } finally {
@@ -117,6 +192,72 @@ export class PushNotificationService {
   async toggle(): Promise<void> {
     if (this.enabled()) await this.disable();
     else await this.enable();
+  }
+
+  listenForPush(): void {
+    if (this.listening) return;
+    this.listening = true;
+
+    if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type === 'PUSH_RECEIVED') {
+          console.info('[push:admin] SW→page PUSH_RECEIVED', event.data.payload);
+        }
+      });
+    }
+
+    this.startInboxPolling();
+
+    if (!this.swPush?.isEnabled) return;
+    this.swPush.messages.subscribe((msg) => {
+      console.info('[push:admin] SwPush.messages', msg);
+    });
+    this.swPush.notificationClicks.subscribe((ev) => {
+      console.info('[push:admin] notificationClicks', ev);
+    });
+  }
+
+  startInboxPolling(): void {
+    if (typeof window === 'undefined') return;
+    if (this.inboxTimer) return;
+    void this.pullInbox();
+    this.inboxTimer = window.setInterval(() => void this.pullInbox(), 8000);
+  }
+
+  private inboxTimer: number | null = null;
+  private readonly seenInbox = new Set<string>();
+
+  private async pullInbox(): Promise<void> {
+    if (!this.enabled() && Notification.permission !== 'granted') return;
+    try {
+      const items = await firstValueFrom(
+        this.http.get<
+          Array<{ id: string; title: string; body: string; url?: string }>
+        >(`${environment.apiUrl}/admin/push/inbox`),
+      );
+      if (!items?.length) return;
+      const fresh = items.filter((i) => !this.seenInbox.has(i.id));
+      for (const item of fresh) {
+        this.seenInbox.add(item.id);
+        try {
+          new Notification(item.title, {
+            body: item.body,
+            tag: `inbox-${item.id}`,
+            dir: 'rtl',
+            lang: 'ar',
+          });
+        } catch (err) {
+          console.warn('[push:admin] inbox Notification failed', err);
+        }
+      }
+      await firstValueFrom(
+        this.http.post(`${environment.apiUrl}/admin/push/inbox/read`, {
+          ids: fresh.map((i) => i.id),
+        }),
+      ).catch(() => undefined);
+    } catch (err) {
+      console.warn('[push:admin] inbox poll failed', err);
+    }
   }
 
   private async resolveVapidPublicKey(): Promise<string> {
@@ -155,8 +296,7 @@ export class PushNotificationService {
       typeof window !== 'undefined' &&
       'Notification' in window &&
       'serviceWorker' in navigator &&
-      'PushManager' in window &&
-      this.swPush != null
+      'PushManager' in window
     );
   }
 

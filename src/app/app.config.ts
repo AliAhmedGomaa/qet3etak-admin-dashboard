@@ -22,7 +22,7 @@ export const appConfig: ApplicationConfig = {
         authErrorInterceptor,
       ]),
     ),
-    provideServiceWorker('ngsw-worker.js', {
+    provideServiceWorker('push-sw.js', {
       enabled: !isDevMode(),
       // Register ASAP so Android Chrome can treat the site as installable.
       registrationStrategy: 'registerImmediately',

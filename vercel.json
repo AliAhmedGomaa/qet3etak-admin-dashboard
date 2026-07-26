@@ -5,7 +5,7 @@
   "framework": null,
   "rewrites": [
     {
-      "source": "/((?!ngsw-worker\\.js|ngsw\\.json|manifest\\.webmanifest|icons/|favicon\\.ico).*)",
+      "source": "/((?!push-sw\\.js|ngsw-worker\\.js|ngsw\\.json|manifest\\.webmanifest|icons/|favicon\\.ico).*)",
       "destination": "/index.html"
     }
   ],
@@ -15,6 +15,13 @@
       "headers": [
         { "key": "Content-Type", "value": "application/manifest+json; charset=utf-8" },
         { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    },
+    {
+      "source": "/push-sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
       ]
     },
     {

@@ -13,6 +13,7 @@ import { AdminSpecialRequestsApi } from '../../core/special-requests/admin-speci
 
 type BroadcastResult = {
   targeted: number;
+  subscriptions?: number;
   sent: number;
   failed: number;
   enabled: boolean;
@@ -133,13 +134,28 @@ type BroadcastResult = {
           </fieldset>
 
           @if (result(); as res) {
-            <p class="ok">
-              أُرسل إلى {{ res.sent }} اشتراك (مستهدفون: {{ res.targeted }} متجر
-              @if (res.failed > 0) {
-                ، فشل: {{ res.failed }}
-              }
-              ).
-            </p>
+            @if (res.sent === 0) {
+              <p class="warn">
+                لم يُرسل أي إشعار.
+                @if (!res.enabled) {
+                  مفاتيح VAPID غير مفعّلة على الخادم.
+                } @else if ((res.subscriptions ?? 0) === 0) {
+                  لا يوجد أصحاب متاجر فعّلوا الإشعارات بعد — اطلب منهم الضغط على
+                  «تفعيل الإشعارات» في تطبيق المتجر.
+                } @else {
+                  فشلت كل المحاولات ({{ res.failed }}).
+                }
+                (مستهدفون: {{ res.targeted }} متجر)
+              </p>
+            } @else {
+              <p class="ok">
+                أُرسل إلى {{ res.sent }} اشتراك (مستهدفون: {{ res.targeted }} متجر
+                @if (res.failed > 0) {
+                  ، فشل: {{ res.failed }}
+                }
+                ).
+              </p>
+            }
           }
           @if (error()) {
             <p class="err">{{ error() }}</p>
@@ -299,6 +315,7 @@ type BroadcastResult = {
     }
     button[type='submit']:disabled { opacity: 0.6; cursor: wait; }
     .ok { margin: 0; color: #0d9a6a; background: #ecfdf6; padding: 0.7rem 0.85rem; border-radius: 0.65rem; }
+    .warn { margin: 0; color: #92400e; background: #fffbeb; padding: 0.7rem 0.85rem; border-radius: 0.65rem; }
     .err { margin: 0; color: #991b1b; background: #fef2f2; padding: 0.7rem 0.85rem; border-radius: 0.65rem; }
     .preview h2 { margin: 0 0 0.85rem; font-size: 0.95rem; }
     .toast {
