@@ -52,6 +52,8 @@ export class UsersAdmin implements OnInit {
   protected readonly canAssignAdmin = computed(
     () => this.auth.user()?.role === 'ADMIN',
   );
+  protected readonly canUpdateUser = computed(() => this.auth.can('users.update'));
+  protected readonly canDeleteUser = computed(() => this.auth.can('users.delete'));
 
   protected readonly assignableRoles = computed(() => {
     const all = this.roles().filter(
@@ -81,10 +83,12 @@ export class UsersAdmin implements OnInit {
     return staff?.id ?? this.assignableRoles()[0]?.id ?? '';
   });
 
-  /** Create needs Role documents with ids from the API. */
+  /** Create needs permission + Role documents with ids from the API. */
   protected readonly canCreateUser = computed(
     () =>
-      this.assignableRoles().some((r) => !!r.id) && !!this.defaultRoleId(),
+      this.auth.can('users.create') &&
+      this.assignableRoles().some((r) => !!r.id) &&
+      !!this.defaultRoleId(),
   );
 
   protected readonly form = this.fb.nonNullable.group({

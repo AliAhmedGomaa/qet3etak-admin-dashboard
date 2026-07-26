@@ -9,7 +9,6 @@ import {
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
-import { effectiveNavRole } from '../core/auth/auth.models';
 import { ChatService } from '../core/chat/chat.service';
 import { ReturnsAdminService } from '../core/returns/returns-admin.service';
 import { HrAdminService } from '../core/hr/hr-admin.service';
@@ -22,8 +21,8 @@ type NavItem = {
   path: string;
   label: string;
   icon: string;
-  /** If set, only these roles see the item. Omit = all admin-panel roles. */
-  roles?: Array<'ADMIN' | 'MANAGER' | 'STAFF' | 'BRANCH_MANAGER'>;
+  /** If set, user needs any of these permissions (ADMIN always sees all). */
+  permissions?: string[];
 };
 
 /** Paths branch managers may use (API still enforces scope). */
@@ -614,6 +613,7 @@ export class AdminShell implements OnInit {
   protected readonly navOpen = signal(false);
 
   ngOnInit(): void {
+    this.auth.refreshMe().subscribe();
     this.pwa.init();
     this.chat.connect();
     this.chat.loadConversations().subscribe();
@@ -633,149 +633,157 @@ export class AdminShell implements OnInit {
   protected readonly allNavItems: NavItem[] = [
     {
       path: '/approvals',
+      permissions: ['shops.approve'],
       label: 'اعتماد المتاجر',
       icon: 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/shops',
+      permissions: ['shops.read'],
       label: 'المتاجر',
       icon: 'M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72l1.189-1.19A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72M6.75 18h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .414.336.75.75.75z',
     },
     {
       path: '/users',
+      permissions: ['users.read'],
       label: 'المستخدمون',
       icon: 'M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.108-2.008-.26-2.642m0 2.645a14.814 14.814 0 01-.26 2.642m0-2.645a14.927 14.927 0 00-4.487-2.97m4.487 2.97c-.318.052-.642.09-.972.115a14.83 14.83 0 01-4.487-2.97M3.375 19.5h.008v.008H3.375V19.5zM3.75 12a8.25 8.25 0 1116.5 0 8.25 8.25 0 01-16.5 0z',
-      roles: ['ADMIN'],
     },
     {
       path: '/roles',
+      permissions: ['roles.read', 'roles.manage'],
       label: 'الأدوار',
       icon: 'M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z',
-      roles: ['ADMIN'],
     },
     {
       path: '/branches',
+      permissions: ['branches.read', 'branches.manage'],
       label: 'الفروع',
       icon: 'M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z',
-      roles: ['ADMIN'],
     },
     {
       path: '/inventory',
+      permissions: ['products.read', 'products.manage', 'inventory.manage'],
       label: 'المخزون',
       icon: 'M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/brands',
+      permissions: ['brands.manage'],
       label: 'الماركات',
       icon: 'M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z M6 6h.008v.008H6V6z',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/categories',
+      permissions: ['categories.manage'],
       label: 'الفئات',
       icon: 'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/qualities',
+      permissions: ['qualities.manage'],
       label: 'درجات الجودة',
       icon: 'M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/data-import',
+      permissions: ['import.manage'],
       label: 'استيراد بيانات',
       icon: 'M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/credit',
+      permissions: ['credit.read'],
       label: 'دفتر الائتمان',
       icon: 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z',
     },
     {
       path: '/financials',
+      permissions: ['financials.read'],
       label: 'التحليلات المالية',
       icon: 'M3 3v18h18M18.75 8.25l-5.25 5.25-3-3L6.75 14.25',
     },
     {
       path: '/reports',
+      permissions: ['reports.read'],
       label: 'التقارير',
       icon: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z',
     },
     {
       path: '/orders-board',
+      permissions: ['orders.read'],
       label: 'لوحة الطلبات',
       icon: 'M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125z',
     },
     {
       path: '/invoices',
+      permissions: ['invoices.read'],
       label: 'الفواتير',
       icon: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z',
     },
     {
       path: '/delivery-guys',
+      permissions: ['delivery.read', 'delivery.manage'],
       label: 'مندوبو التوصيل',
       icon: 'M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0H21M3.375 14.25h12.75c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v6.75c0 .621.504 1.125 1.125 1.125z',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/employees',
+      permissions: ['hr.read', 'hr.manage'],
       label: 'الموظفون',
       icon: 'M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/employees/vacations',
+      permissions: ['hr.vacations', 'hr.manage'],
       label: 'طلبات الإجازات',
       icon: 'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/special-requests',
+      permissions: ['special_requests.read', 'special_requests.manage'],
       label: 'الطلبات الخاصة',
       icon: 'M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456z',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/returns',
+      permissions: ['returns.read'],
       label: 'المرتجعات',
       icon: 'M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3',
     },
     {
       path: '/broadcast',
+      permissions: ['broadcast.manage'],
       label: 'بث إعلان',
       icon: 'M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/chat',
+      permissions: ['chat.manage'],
       label: 'المحادثات',
       icon: 'M8.25 8.25h7.5M8.25 12h4.5m6.75-1.5a8.25 8.25 0 01-11.4 7.62L3 19.5l1.38-4.1A8.25 8.25 0 1119.5 10.5z',
-      roles: ['ADMIN', 'MANAGER', 'STAFF'],
     },
     {
       path: '/branding',
+      permissions: ['branding.manage'],
       label: 'هوية المنصة',
       icon: 'M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42',
-      roles: ['ADMIN'],
     },
   ];
 
   protected readonly visibleNavItems = computed(() => {
-    const role = effectiveNavRole(this.auth.user());
-    if (!role) return [];
-    if (role === 'BRANCH_MANAGER') {
-      return this.allNavItems.filter((item) =>
-        BRANCH_MANAGER_PATHS.has(item.path),
-      );
+    const user = this.auth.user();
+    if (!user) return [];
+    const items = this.allNavItems.filter((item) => {
+      if (!item.permissions?.length) return true;
+      return this.auth.can(...item.permissions);
+    });
+    if (user.role === 'BRANCH_MANAGER' || this.auth.can('admin.branch_scoped')) {
+      // Keep branch managers on the scoped subset unless they have broader grants.
+      if (user.role === 'BRANCH_MANAGER') {
+        return items.filter((item) => BRANCH_MANAGER_PATHS.has(item.path));
+      }
     }
-    return this.allNavItems.filter(
-      (item) =>
-        !item.roles ||
-        item.roles.includes(role as 'ADMIN' | 'MANAGER' | 'STAFF' | 'BRANCH_MANAGER'),
-    );
+    return items;
   });
 }

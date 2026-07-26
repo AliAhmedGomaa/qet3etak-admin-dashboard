@@ -30,6 +30,8 @@ export interface ShopUser {
   branchId?: string | null;
   /** Shop-specific catalog discount percent (0–100). */
   shopDiscountPercent?: number;
+  /** Fine-grained permissions from the assigned Role. */
+  permissions?: string[];
   createdAt?: string;
 }
 

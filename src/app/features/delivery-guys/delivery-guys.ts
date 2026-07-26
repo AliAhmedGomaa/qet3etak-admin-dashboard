@@ -14,6 +14,7 @@ import {
 import {
   DeliveryFeeModel,
   DeliveryGuy,
+  DeliveryGuyInput,
   DeliveryGuysAdminService,
 } from '../../core/delivery/delivery-guys-admin.service';
 import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
@@ -62,6 +63,7 @@ export class DeliveryGuysPage implements OnInit {
   protected readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(2)]],
     phone: ['', [Validators.required, Validators.minLength(8)]],
+    password: [''],
     city: [''],
     vehicleType: [''],
     notes: [''],
@@ -96,7 +98,12 @@ export class DeliveryGuysPage implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     this.api
-      .list({ page: this.page(), limit: 20, q: this.searchQuery() || undefined })
+      .list({
+        page: this.page(),
+        limit: 20,
+        q: this.searchQuery() || undefined,
+        includeInactive: true,
+      })
       .subscribe({
         next: (res) => {
           this.guys.set(res.items);
@@ -146,6 +153,7 @@ export class DeliveryGuysPage implements OnInit {
     this.form.reset({
       fullName: '',
       phone: '',
+      password: '',
       city: '',
       vehicleType: '',
       notes: '',
@@ -156,6 +164,11 @@ export class DeliveryGuysPage implements OnInit {
       baseFee: 20,
       perItemFee: 2,
     });
+    this.form.controls.password.setValidators([
+      Validators.required,
+      Validators.minLength(6),
+    ]);
+    this.form.controls.password.updateValueAndValidity();
     this.editorOpen.set(true);
   }
 
@@ -165,6 +178,7 @@ export class DeliveryGuysPage implements OnInit {
     this.form.patchValue({
       fullName: guy.fullName,
       phone: guy.phone,
+      password: '',
       city: guy.city,
       vehicleType: guy.vehicleType,
       notes: guy.notes,
@@ -175,6 +189,9 @@ export class DeliveryGuysPage implements OnInit {
       baseFee: guy.baseFee,
       perItemFee: guy.perItemFee,
     });
+    this.form.controls.password.clearValidators();
+    this.form.controls.password.setValidators([Validators.minLength(6)]);
+    this.form.controls.password.updateValueAndValidity();
     this.editorOpen.set(true);
   }
 
@@ -201,9 +218,28 @@ export class DeliveryGuysPage implements OnInit {
     this.saving.set(true);
     this.error.set(null);
     const value = this.form.getRawValue();
+    const payload: Partial<DeliveryGuyInput> & {
+      fullName: string;
+      phone: string;
+    } = {
+      fullName: value.fullName,
+      phone: value.phone,
+      city: value.city,
+      vehicleType: value.vehicleType,
+      notes: value.notes,
+      status: value.status,
+      feeModel: value.feeModel,
+      flatFee: value.flatFee,
+      percentRate: value.percentRate,
+      baseFee: value.baseFee,
+      perItemFee: value.perItemFee,
+    };
+    if (value.password.trim()) {
+      payload.password = value.password.trim();
+    }
     const req = this.editingId()
-      ? this.api.update(this.editingId()!, value)
-      : this.api.create(value);
+      ? this.api.update(this.editingId()!, payload)
+      : this.api.create({ ...payload, password: value.password.trim() });
     req.subscribe({
       next: () => {
         this.saving.set(false);

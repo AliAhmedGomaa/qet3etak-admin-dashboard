@@ -206,7 +206,7 @@
                         <small>×{{ line.quantity }}</small>
                       }
                       <small class="price">
-                        {{ line.lineTotal | currency: 'EGP':'symbol-narrow':'1.0-2' }}
+                        {{ line.unitPrice | currency: 'EGP':'symbol-narrow':'1.0-2' }}
                       </small>
                     </span>
                   } @empty {

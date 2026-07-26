@@ -47,4 +47,24 @@ export class RolesAdminService {
   remove(id: string): Observable<{ ok: boolean }> {
     return this.http.delete<{ ok: boolean }>(`${this.base}/${id}`);
   }
+
+  catalog(): Observable<{
+    items: Array<{
+      key: string;
+      labelAr: string;
+      group: string;
+      groupLabelAr: string;
+    }>;
+    keys: string[];
+  }> {
+    return this.http.get<{
+      items: Array<{
+        key: string;
+        labelAr: string;
+        group: string;
+        groupLabelAr: string;
+      }>;
+      keys: string[];
+    }>(`${this.base}/catalog`);
+  }
 }

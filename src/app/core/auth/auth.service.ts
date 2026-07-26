@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, catchError, map, of, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthResponse, ShopUser, canAccessAdminPanel } from './auth.models';
 
@@ -24,6 +24,7 @@ export class AuthService {
     () => this.user()?.role === 'BRANCH_MANAGER',
   );
   readonly branchId = computed(() => this.user()?.branchId ?? null);
+  readonly permissions = computed(() => this.user()?.permissions ?? []);
 
   login(phone: string, password: string): Observable<AuthResponse> {
     return this.http
@@ -39,6 +40,43 @@ export class AuthService {
       );
   }
 
+  /** Refresh profile + permissions from /auth/me (keeps local session in sync). */
+  refreshMe(): Observable<ShopUser | null> {
+    if (!this.tokenSignal()) return of(null);
+    return this.http.get<ShopUser>(`${environment.apiUrl}/auth/me`).pipe(
+      tap((user) => {
+        this.userSignal.set(user);
+        try {
+          localStorage.setItem(USER_KEY, JSON.stringify(user));
+        } catch {
+          /* ignore */
+        }
+      }),
+      catchError(() => of(null)),
+    );
+  }
+
+  /** True if the current user has any of the given permission keys. ADMIN always true. */
+  can(...keys: string[]): boolean {
+    if (!keys.length) return true;
+    const user = this.user();
+    if (!user) return false;
+    if (user.role === 'ADMIN') return true;
+    const held = new Set(user.permissions ?? []);
+    if (held.has('*')) return true;
+    return keys.some((k) => held.has(k) || held.has(this.manageKey(k)));
+  }
+
+  canAll(...keys: string[]): boolean {
+    if (!keys.length) return true;
+    const user = this.user();
+    if (!user) return false;
+    if (user.role === 'ADMIN') return true;
+    const held = new Set(user.permissions ?? []);
+    if (held.has('*')) return true;
+    return keys.every((k) => held.has(k) || held.has(this.manageKey(k)));
+  }
+
   logout(): void {
     this.clearSession();
     void this.router.navigateByUrl('/login');
@@ -51,6 +89,12 @@ export class AuthService {
     void this.router.navigate(['/login'], {
       queryParams: { expired: '1' },
     });
+  }
+
+  private manageKey(key: string): string {
+    const i = key.lastIndexOf('.');
+    if (i < 0) return key;
+    return `${key.slice(0, i)}.manage`;
   }
 
   private clearSession(): void {

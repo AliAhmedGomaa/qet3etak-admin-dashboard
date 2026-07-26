@@ -12,7 +12,7 @@ export const adminGuard: CanActivateFn = () => {
   return router.createUrlTree(['/login']);
 };
 
-/** Super-admin only (branches CRUD, users, roles, HQ tools). */
+/** Super-admin only (legacy). Prefer permissionGuard for new screens. */
 export const superAdminGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
@@ -22,3 +22,16 @@ export const superAdminGuard: CanActivateFn = () => {
   }
   return router.createUrlTree(['/login']);
 };
+
+/** Allow if the user has any of the listed permissions (ADMIN always allowed). */
+export function permissionGuard(...keys: string[]): CanActivateFn {
+  return () => {
+    const auth = inject(AuthService);
+    const router = inject(Router);
+    if (!auth.isAuthenticated() || !canAccessAdminPanel(auth.user())) {
+      return router.createUrlTree(['/login']);
+    }
+    if (auth.can(...keys)) return true;
+    return router.createUrlTree(['/reports']);
+  };
+}

@@ -42,7 +42,25 @@ export class RolesAdmin implements OnInit {
   protected readonly deleteTarget = signal<AdminRole | null>(null);
   protected readonly deleting = signal(false);
   protected readonly permissions = signal<string[]>([]);
-  protected readonly permissionDraft = signal('');
+  protected readonly catalog = signal<
+    Array<{ key: string; labelAr: string; group: string; groupLabelAr: string }>
+  >([]);
+  protected readonly catalogGroups = computed(() => {
+    const map = new Map<
+      string,
+      { group: string; label: string; items: Array<{ key: string; labelAr: string }> }
+    >();
+    for (const item of this.catalog()) {
+      const g = map.get(item.group) ?? {
+        group: item.group,
+        label: item.groupLabelAr,
+        items: [],
+      };
+      g.items.push({ key: item.key, labelAr: item.labelAr });
+      map.set(item.group, g);
+    }
+    return [...map.values()];
+  });
 
   protected readonly editingSystem = computed(() => {
     const id = this.editingId();
@@ -62,6 +80,10 @@ export class RolesAdmin implements OnInit {
   });
 
   ngOnInit(): void {
+    this.api.catalog().subscribe({
+      next: (res) => this.catalog.set(res.items ?? []),
+      error: () => this.error.set('تعذر تحميل كتالوج الصلاحيات'),
+    });
     this.load();
   }
 
@@ -120,7 +142,6 @@ export class RolesAdmin implements OnInit {
   protected openCreate(): void {
     this.editingId.set(null);
     this.permissions.set(['admin.panel']);
-    this.permissionDraft.set('');
     this.form.reset({
       name: '',
       code: '',
@@ -135,7 +156,6 @@ export class RolesAdmin implements OnInit {
   protected openEdit(role: AdminRole): void {
     this.editingId.set(role.id);
     this.permissions.set([...(role.permissions ?? [])]);
-    this.permissionDraft.set('');
     this.form.reset({
       name: role.name,
       code: role.code,
@@ -155,43 +175,33 @@ export class RolesAdmin implements OnInit {
     this.editorOpen.set(false);
     this.editingId.set(null);
     this.permissions.set([]);
-    this.permissionDraft.set('');
     this.form.controls.code.enable();
   }
 
-  protected addPermission(): void {
-    const parts = this.permissionDraft()
-      .split(/[,\s]+/)
-      .map((p) => p.trim())
-      .filter(Boolean);
-    if (!parts.length) return;
-
-    const next = [...this.permissions()];
-    for (const part of parts) {
-      if (!next.includes(part)) next.push(part);
-    }
-    this.permissions.set(next);
-    this.permissionDraft.set('');
+  protected hasPermission(key: string): boolean {
+    return this.permissions().includes(key);
   }
 
-  protected removePermission(permission: string): void {
-    this.permissions.update((list) => list.filter((p) => p !== permission));
-  }
-
-  protected onPermissionKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      this.addPermission();
+  protected togglePermission(key: string, checked: boolean): void {
+    if (checked) {
+      if (!this.permissions().includes(key)) {
+        this.permissions.update((list) => [...list, key]);
+      }
       return;
     }
-    if (
-      event.key === 'Backspace' &&
-      !this.permissionDraft() &&
-      this.permissions().length
-    ) {
-      event.preventDefault();
-      this.permissions.update((list) => list.slice(0, -1));
+    this.permissions.update((list) => list.filter((p) => p !== key));
+  }
+
+  protected selectGroup(groupItems: Array<{ key: string }>, on: boolean): void {
+    const keys = groupItems.map((i) => i.key);
+    if (on) {
+      const set = new Set(this.permissions());
+      for (const k of keys) set.add(k);
+      this.permissions.set([...set]);
+      return;
     }
+    const drop = new Set(keys);
+    this.permissions.update((list) => list.filter((p) => !drop.has(p)));
   }
 
   protected save(): void {

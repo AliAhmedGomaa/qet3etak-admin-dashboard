@@ -57,8 +57,9 @@ export class OrdersBoard implements OnInit {
 
   ngOnInit(): void {
     this.load();
-    this.deliveryApi.list({ page: 1, limit: 100, status: 'ACTIVE' }).subscribe({
-      next: (res) => this.deliveryGuys.set(res.items),
+    this.deliveryApi.list({ page: 1, limit: 100 }).subscribe({
+      next: (res) => this.deliveryGuys.set(res.items ?? []),
+      error: () => this.error.set('تعذر تحميل مندوبي التوصيل'),
     });
   }
 

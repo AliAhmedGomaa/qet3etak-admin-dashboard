@@ -150,42 +150,37 @@
         </label>
 
         <div class="field">
-          <span class="field__label">الصلاحيات</span>
-          <div class="perm-editor" dir="ltr">
-            @if (permissions().length) {
-              <div class="perm-chips" role="list">
-                @for (perm of permissions(); track perm) {
-                  <span class="perm-chip" role="listitem">
-                    <span class="perm-chip__text">{{ perm }}</span>
-                    <button
-                      type="button"
-                      class="perm-chip__remove"
-                      (click)="removePermission(perm)"
-                      [attr.aria-label]="'إزالة ' + perm"
-                    >
-                      ×
-                    </button>
-                  </span>
-                }
-              </div>
-            } @else {
-              <p class="perm-empty">لا توجد صلاحيات بعد.</p>
+          <span class="field__label">الصلاحيات (اختَر ما يراه ويفعله الدور)</span>
+          <p class="hint">مثال: فعّل «عرض المستخدمين» بدون «إضافة مستخدم» ليُسمح بالمشاهدة فقط.</p>
+          <div class="perm-matrix">
+            @for (group of catalogGroups(); track group.group) {
+              <section class="perm-group">
+                <header>
+                  <strong>{{ group.label }}</strong>
+                  <div class="perm-group__actions">
+                    <button type="button" class="linkish" (click)="selectGroup(group.items, true)">الكل</button>
+                    <button type="button" class="linkish" (click)="selectGroup(group.items, false)">مسح</button>
+                  </div>
+                </header>
+                <div class="perm-group__grid">
+                  @for (item of group.items; track item.key) {
+                    <label class="perm-check">
+                      <input
+                        type="checkbox"
+                        [checked]="hasPermission(item.key)"
+                        (change)="togglePermission(item.key, $any($event.target).checked)"
+                      />
+                      <span>
+                        <em>{{ item.labelAr }}</em>
+                        <small dir="ltr">{{ item.key }}</small>
+                      </span>
+                    </label>
+                  }
+                </div>
+              </section>
             }
-            <div class="perm-add">
-              <input
-                type="text"
-                [value]="permissionDraft()"
-                (input)="permissionDraft.set($any($event.target).value)"
-                (keydown)="onPermissionKeydown($event)"
-                placeholder="admin.panel"
-                aria-label="إضافة صلاحية"
-              />
-              <button type="button" class="btn btn-ghost perm-add__btn" (click)="addPermission()">
-                إضافة
-              </button>
-            </div>
           </div>
-          <span class="hint">اكتب الصلاحية ثم Enter أو إضافة. يمكن إزالة الشريحة بزر ×.</span>
+          <span class="hint">المحدّد الآن: {{ permissions().length }} صلاحية</span>
         </div>
 
         <label class="active-toggle">
