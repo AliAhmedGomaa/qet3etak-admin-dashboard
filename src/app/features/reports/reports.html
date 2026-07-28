@@ -111,6 +111,21 @@
         <small>منتجات ≤ 10 وحدات</small>
       </article>
     </div>
+
+    <div class="charts">
+      <div class="card chart-card">
+        <h2>اتجاه المبيعات</h2>
+        <div class="chart-box chart-box--lg">
+          <canvas #summaryTrendCanvas></canvas>
+        </div>
+      </div>
+      <div class="card chart-card">
+        <h2>مؤشرات مالية</h2>
+        <div class="chart-box">
+          <canvas #summaryMixCanvas></canvas>
+        </div>
+      </div>
+    </div>
   }
 
   <!-- Sales -->
@@ -128,6 +143,28 @@
         <span class="kpi__label">الوحدات</span>
         <strong class="kpi__value">{{ r.totals.unitsSold }}</strong>
       </article>
+    </div>
+
+    <div class="card chart-card">
+      <h2>الإيرادات والطلبات يومياً</h2>
+      <div class="chart-box chart-box--lg">
+        <canvas #salesTrendCanvas></canvas>
+      </div>
+    </div>
+
+    <div class="charts charts--equal">
+      <div class="card chart-card">
+        <h2>توزيع الحالات</h2>
+        <div class="chart-box">
+          <canvas #salesStatusCanvas></canvas>
+        </div>
+      </div>
+      <div class="card chart-card">
+        <h2>توزيع طرق الدفع (إيراد)</h2>
+        <div class="chart-box">
+          <canvas #salesPaymentCanvas></canvas>
+        </div>
+      </div>
     </div>
 
     <div class="grid-2">
@@ -208,6 +245,12 @@
         <strong class="kpi__value">{{ r.summary.revenue | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
       </article>
     </div>
+    <div class="card chart-card">
+      <h2>أعلى المتاجر إيراداً</h2>
+      <div class="chart-box chart-box--lg">
+        <canvas #shopsBarCanvas></canvas>
+      </div>
+    </div>
     <div class="card">
       <h2>ترتيب المتاجر</h2>
       <table>
@@ -236,6 +279,12 @@
 
   <!-- Products -->
   @if (tab() === 'products' && products(); as r) {
+    <div class="card chart-card">
+      <h2>أعلى المنتجات مبيعاً</h2>
+      <div class="chart-box chart-box--lg">
+        <canvas #productsBarCanvas></canvas>
+      </div>
+    </div>
     <div class="card">
       <h2>أفضل المنتجات</h2>
       <table>
@@ -279,6 +328,21 @@
         <strong class="kpi__value">{{ r.summary.shopsWithDebt }}</strong>
         <small>من {{ r.summary.walletCount }} محفظة</small>
       </article>
+    </div>
+
+    <div class="charts charts--equal">
+      <div class="card chart-card">
+        <h2>حركة المحافظ</h2>
+        <div class="chart-box">
+          <canvas #creditMovementsCanvas></canvas>
+        </div>
+      </div>
+      <div class="card chart-card">
+        <h2>أعلى الديون</h2>
+        <div class="chart-box chart-box--lg">
+          <canvas #creditDebtCanvas></canvas>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -348,6 +412,12 @@
         <strong class="kpi__value">{{ r.summary.feesEarned | currency: 'EGP':'symbol-narrow':'1.0-0' }}</strong>
       </article>
     </div>
+    <div class="card chart-card">
+      <h2>أداء المندوبين</h2>
+      <div class="chart-box chart-box--lg">
+        <canvas #deliveryBarCanvas></canvas>
+      </div>
+    </div>
     <div class="card">
       <h2>حسب المندوب (الفترة)</h2>
       @if (r.byCourier.length) {
@@ -394,6 +464,21 @@
         <span class="kpi__label">الوحدات</span>
         <strong class="kpi__value">{{ r.summary.unitsReturned }}</strong>
       </article>
+    </div>
+
+    <div class="charts charts--equal">
+      <div class="card chart-card">
+        <h2>توزيع حالات الإرجاع</h2>
+        <div class="chart-box">
+          <canvas #returnsStatusCanvas></canvas>
+        </div>
+      </div>
+      <div class="card chart-card">
+        <h2>طرق الاسترداد</h2>
+        <div class="chart-box">
+          <canvas #returnsRefundCanvas></canvas>
+        </div>
+      </div>
     </div>
 
     <div class="grid-2">
@@ -490,6 +575,12 @@
         <strong class="kpi__value">{{ r.summary.lowStock }}</strong>
         <small>≤ {{ r.lowStockThreshold }}</small>
       </article>
+    </div>
+    <div class="card chart-card chart-card--narrow">
+      <h2>حالة المخزون</h2>
+      <div class="chart-box">
+        <canvas #inventoryMixCanvas></canvas>
+      </div>
     </div>
     <div class="card">
       <h2>مخزون منخفض / نافد</h2>

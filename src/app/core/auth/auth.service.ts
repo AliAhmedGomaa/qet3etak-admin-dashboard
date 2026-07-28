@@ -1,7 +1,15 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, catchError, map, of, tap } from 'rxjs';
+import {
+  Observable,
+  catchError,
+  finalize,
+  map,
+  of,
+  shareReplay,
+  tap,
+} from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthResponse, ShopUser, canAccessAdminPanel } from './auth.models';
 
@@ -15,6 +23,9 @@ export class AuthService {
 
   private readonly tokenSignal = signal<string | null>(this.read(TOKEN_KEY));
   private readonly userSignal = signal<ShopUser | null>(this.readUser());
+  /** True after at least one successful /auth/me in this tab session. */
+  private readonly sessionSynced = signal(false);
+  private inflightMe: Observable<ShopUser | null> | null = null;
 
   readonly user = this.userSignal.asReadonly();
   readonly token = this.tokenSignal.asReadonly();
@@ -25,6 +36,7 @@ export class AuthService {
   );
   readonly branchId = computed(() => this.user()?.branchId ?? null);
   readonly permissions = computed(() => this.user()?.permissions ?? []);
+  readonly sessionReady = this.sessionSynced.asReadonly();
 
   login(phone: string, password: string): Observable<AuthResponse> {
     return this.http
@@ -36,32 +48,60 @@ export class AuthService {
           }
           return res;
         }),
-        tap((res) => this.persist(res)),
+        tap((res) => {
+          this.persist(res);
+          this.sessionSynced.set(true);
+        }),
       );
   }
 
   /** Refresh profile + permissions from /auth/me (keeps local session in sync). */
   refreshMe(): Observable<ShopUser | null> {
-    if (!this.tokenSignal()) return of(null);
-    return this.http.get<ShopUser>(`${environment.apiUrl}/auth/me`).pipe(
-      tap((user) => {
-        this.userSignal.set(user);
-        try {
-          localStorage.setItem(USER_KEY, JSON.stringify(user));
-        } catch {
-          /* ignore */
-        }
-      }),
-      catchError(() => of(null)),
-    );
+    if (!this.tokenSignal()) {
+      this.sessionSynced.set(false);
+      return of(null);
+    }
+    if (this.inflightMe) return this.inflightMe;
+
+    this.inflightMe = this.http
+      .get<ShopUser>(`${environment.apiUrl}/auth/me`)
+      .pipe(
+        tap((user) => {
+          this.userSignal.set(user);
+          this.sessionSynced.set(true);
+          try {
+            localStorage.setItem(USER_KEY, JSON.stringify(user));
+          } catch {
+            /* ignore */
+          }
+        }),
+        catchError(() => of(null)),
+        finalize(() => {
+          this.inflightMe = null;
+        }),
+        shareReplay(1),
+      );
+
+    return this.inflightMe;
   }
 
-  /** True if the current user has any of the given permission keys. ADMIN always true. */
+  /**
+   * Ensures permissions are loaded from the API before nav/guards decide.
+   * Avoids gating on a stale localStorage user that predates the permissions field.
+   */
+  ensureSession(): Observable<ShopUser | null> {
+    if (!this.tokenSignal()) return of(null);
+    if (this.sessionSynced() && Array.isArray(this.user()?.permissions)) {
+      return of(this.user());
+    }
+    return this.refreshMe();
+  }
+
+  /** True if the current user has any of the given permission keys. */
   can(...keys: string[]): boolean {
     if (!keys.length) return true;
     const user = this.user();
     if (!user) return false;
-    if (user.role === 'ADMIN') return true;
     const held = new Set(user.permissions ?? []);
     if (held.has('*')) return true;
     return keys.some((k) => held.has(k) || held.has(this.manageKey(k)));
@@ -71,7 +111,6 @@ export class AuthService {
     if (!keys.length) return true;
     const user = this.user();
     if (!user) return false;
-    if (user.role === 'ADMIN') return true;
     const held = new Set(user.permissions ?? []);
     if (held.has('*')) return true;
     return keys.every((k) => held.has(k) || held.has(this.manageKey(k)));
@@ -100,6 +139,8 @@ export class AuthService {
   private clearSession(): void {
     this.tokenSignal.set(null);
     this.userSignal.set(null);
+    this.sessionSynced.set(false);
+    this.inflightMe = null;
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   }

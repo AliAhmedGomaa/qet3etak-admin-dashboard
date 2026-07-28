@@ -45,7 +45,7 @@ export class ChatService {
     this.socket.on(
       'typing',
       (payload: { shopId: string; role: string; isTyping: boolean }) => {
-        if (payload.role !== 'SHOP_OWNER') return;
+        if (payload.role !== 'SHOP_OWNER' && payload.role !== 'EMPLOYEE') return;
         this.typingShopId.set(payload.isTyping ? payload.shopId : null);
       },
     );
@@ -112,9 +112,9 @@ export class ChatService {
         list.some((m) => m.id === message.id) ? list : [...list, message],
       );
     }
-    if (message.senderRole === 'SHOP_OWNER') {
+    if (message.senderRole === 'SHOP_OWNER' || message.senderRole === 'EMPLOYEE') {
       this.notifyIfBackground(
-        'رسالة من متجر',
+        message.senderRole === 'EMPLOYEE' ? 'رسالة من موظف' : 'رسالة من متجر',
         message.text,
         message.shopId !== this.activeShopId() ||
           document.visibilityState !== 'visible',

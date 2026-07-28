@@ -134,6 +134,36 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.conv__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.conv__kind {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.conv__kind[data-kind='EMPLOYEE'] {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.kind-line {
+  display: block;
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 600;
 }
 
 .conv__badge {

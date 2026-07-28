@@ -613,7 +613,7 @@ export class AdminShell implements OnInit {
   protected readonly navOpen = signal(false);
 
   ngOnInit(): void {
-    this.auth.refreshMe().subscribe();
+    this.auth.ensureSession().subscribe();
     this.pwa.init();
     this.chat.connect();
     this.chat.loadConversations().subscribe();

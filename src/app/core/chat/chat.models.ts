@@ -1,4 +1,4 @@
-export type ChatSenderRole = 'ADMIN' | 'SHOP_OWNER';
+export type ChatSenderRole = string;
 
 export interface ChatMessage {
   id: string;
@@ -15,6 +15,7 @@ export interface ChatConversation {
   id: string;
   shopId: string;
   shopName: string;
+  kind?: 'SHOP' | 'EMPLOYEE';
   lastMessage: string;
   lastMessageAt: string | null;
   unreadForAdmin: number;

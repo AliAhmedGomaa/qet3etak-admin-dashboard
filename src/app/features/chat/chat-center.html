@@ -21,10 +21,15 @@
             <span class="conv__avatar">{{ initials(conv.shopName) }}</span>
             <span class="conv__body">
               <span class="conv__top">
-                <strong>{{ conv.shopName || 'متجر' }}</strong>
+                <strong>{{ conv.shopName || (conv.kind === 'EMPLOYEE' ? 'موظف' : 'متجر') }}</strong>
                 <time>{{ conv.lastMessageAt | date: 'shortTime' }}</time>
               </span>
-              <span class="conv__last">{{ conv.lastMessage || '—' }}</span>
+              <span class="conv__meta">
+                <span class="conv__kind" [attr.data-kind]="conv.kind || 'SHOP'">
+                  {{ conv.kind === 'EMPLOYEE' ? 'موظف' : 'متجر' }}
+                </span>
+                <span class="conv__last">{{ conv.lastMessage || '—' }}</span>
+              </span>
             </span>
             @if (conv.unreadForAdmin > 0) {
               <em class="conv__badge">{{ conv.unreadForAdmin }}</em>
@@ -45,7 +50,10 @@
       <header class="chatc__thread-head">
         <span class="conv__avatar">{{ initials(activeConversation()!.shopName) }}</span>
         <div>
-          <strong>{{ activeConversation()!.shopName || 'متجر' }}</strong>
+          <strong>{{ activeConversation()!.shopName || (activeConversation()!.kind === 'EMPLOYEE' ? 'موظف' : 'متجر') }}</strong>
+          <small class="kind-line">
+            {{ activeConversation()!.kind === 'EMPLOYEE' ? 'محادثة موظف' : 'محادثة متجر' }}
+          </small>
           @if (chat.typingShopId() === activeConversation()!.shopId) {
             <small class="typing">يكتب الآن…</small>
           }
@@ -56,8 +64,8 @@
         @for (msg of chat.messages(); track msg.id) {
           <div
             class="bubble"
-            [class.bubble--mine]="msg.senderRole === 'ADMIN'"
-            [class.bubble--them]="msg.senderRole === 'SHOP_OWNER'"
+            [class.bubble--mine]="msg.senderRole !== 'SHOP_OWNER' && msg.senderRole !== 'EMPLOYEE'"
+            [class.bubble--them]="msg.senderRole === 'SHOP_OWNER' || msg.senderRole === 'EMPLOYEE'"
           >
             <p>{{ msg.text }}</p>
             <time>{{ msg.createdAt | date: 'shortTime' }}</time>

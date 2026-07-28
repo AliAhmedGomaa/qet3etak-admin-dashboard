@@ -11,6 +11,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { AuthService } from '../../core/auth/auth.service';
 import { AdminRole } from '../../core/roles/role.models';
 import { RolesAdminService } from '../../core/roles/roles-admin.service';
 import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
@@ -26,6 +27,7 @@ import { AdminPager } from '../../shared/admin-pager/admin-pager';
 export class RolesAdmin implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(RolesAdminService);
+  private readonly auth = inject(AuthService);
 
   protected readonly roles = signal<AdminRole[]>([]);
   protected readonly loading = signal(false);
@@ -239,6 +241,8 @@ export class RolesAdmin implements OnInit {
         this.saving.set(false);
         this.closeEditor();
         this.load();
+        // Apply new matrix immediately for the logged-in user (nav/routes).
+        this.auth.refreshMe().subscribe();
       },
       error: (err) => {
         this.saving.set(false);
