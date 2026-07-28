@@ -12,6 +12,8 @@ import {
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ChatService } from '../../core/chat/chat.service';
 
 @Component({
@@ -24,6 +26,8 @@ import { ChatService } from '../../core/chat/chat.service';
 export class ChatCenter implements OnInit {
   protected readonly chat = inject(ChatService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   private readonly scrollBox =
     viewChild<ElementRef<HTMLDivElement>>('scrollBox');
@@ -48,11 +52,26 @@ export class ChatCenter implements OnInit {
       this.chat.setViewing(false);
       document.removeEventListener('visibilitychange', this.onVisibility);
     });
+
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed())
+      .subscribe((params) => {
+        const shopId = params.get('shopId')?.trim();
+        if (shopId && shopId !== this.chat.activeShopId()) {
+          this.draft.set('');
+          this.chat.openConversation(shopId);
+        }
+      });
   }
 
   ngOnInit(): void {
     this.chat.connect();
-    this.chat.loadConversations().subscribe();
+    this.chat.loadConversations().subscribe({
+      next: () => {
+        const shopId = this.route.snapshot.queryParamMap.get('shopId')?.trim();
+        if (shopId) this.chat.openConversation(shopId);
+      },
+    });
     document.addEventListener('visibilitychange', this.onVisibility);
   }
 
@@ -60,6 +79,12 @@ export class ChatCenter implements OnInit {
     if (shopId === this.chat.activeShopId()) return;
     this.draft.set('');
     this.chat.openConversation(shopId);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { shopId },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   protected send(): void {

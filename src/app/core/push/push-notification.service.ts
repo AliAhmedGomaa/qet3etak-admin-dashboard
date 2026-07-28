@@ -1,10 +1,12 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { SwPush } from '@angular/service-worker';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 const ENABLED_KEY = 'qet3etak.admin.push.enabled';
+const DEFAULT_URL = '/reports';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -18,6 +20,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 @Injectable({ providedIn: 'root' })
 export class PushNotificationService {
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
   private readonly swPush = inject(SwPush, { optional: true });
 
   readonly enabled = signal(this.readEnabled());
@@ -127,7 +130,7 @@ export class PushNotificationService {
         title: 'اختبار Service Worker',
         body: 'إذا رأيت هذا، فـ showNotification من الـ SW يعمل',
         tag: `sw-selftest-admin-${Date.now()}`,
-        data: { url: '/reports' },
+        data: { url: DEFAULT_URL },
       });
 
       this.startInboxPolling();
@@ -136,21 +139,10 @@ export class PushNotificationService {
       const serverNote = `السيرفر: tickle=${saved.tickleSent ?? 0} تأكيد=${saved.confirmationSent ?? 0}`;
       console.info('[push:admin] enable OK', serverNote);
       this.lastError.set(
-        (saved.tickleSent || saved.confirmationSent)
+        saved.tickleSent || saved.confirmationSent
           ? `تم الإرسال من السيرفر (${serverNote}). إن لم يظهر، افحص إشعارات Chrome في إعدادات النظام.`
           : `السيرفر لم يرسل (${serverNote}).`,
       );
-
-      try {
-        new Notification('تم تفعيل الإشعارات', {
-          body: serverNote,
-          tag: `local-welcome-admin-${Date.now()}`,
-          dir: 'rtl',
-          lang: 'ar',
-        });
-      } catch (err) {
-        console.warn('[push:admin] local Notification failed', err);
-      }
 
       return true;
     } catch (err) {
@@ -200,8 +192,12 @@ export class PushNotificationService {
 
     if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
       navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data?.type === 'PUSH_RECEIVED') {
-          console.info('[push:admin] SW→page PUSH_RECEIVED', event.data.payload);
+        const data = event.data;
+        if (data?.type === 'PUSH_RECEIVED') {
+          console.info('[push:admin] SW→page PUSH_RECEIVED', data.payload);
+        }
+        if (data?.type === 'NAVIGATE' && typeof data.url === 'string') {
+          this.navigateTo(data.url);
         }
       });
     }
@@ -213,7 +209,10 @@ export class PushNotificationService {
       console.info('[push:admin] SwPush.messages', msg);
     });
     this.swPush.notificationClicks.subscribe((ev) => {
-      console.info('[push:admin] notificationClicks', ev);
+      const url =
+        (ev.notification?.data as { url?: string } | undefined)?.url ||
+        DEFAULT_URL;
+      this.navigateTo(url);
     });
   }
 
@@ -239,16 +238,7 @@ export class PushNotificationService {
       const fresh = items.filter((i) => !this.seenInbox.has(i.id));
       for (const item of fresh) {
         this.seenInbox.add(item.id);
-        try {
-          new Notification(item.title, {
-            body: item.body,
-            tag: `inbox-${item.id}`,
-            dir: 'rtl',
-            lang: 'ar',
-          });
-        } catch (err) {
-          console.warn('[push:admin] inbox Notification failed', err);
-        }
+        await this.showClickableNotification(item, DEFAULT_URL);
       }
       await firstValueFrom(
         this.http.post(`${environment.apiUrl}/admin/push/inbox/read`, {
@@ -258,6 +248,45 @@ export class PushNotificationService {
     } catch (err) {
       console.warn('[push:admin] inbox poll failed', err);
     }
+  }
+
+  private async showClickableNotification(
+    item: { id: string; title: string; body: string; url?: string },
+    fallbackUrl: string,
+  ): Promise<void> {
+    const url = item.url?.startsWith('/') ? item.url : fallbackUrl;
+    const ready = await navigator.serviceWorker.ready.catch(() => null);
+    if (ready?.active) {
+      ready.active.postMessage({
+        type: 'SHOW_LOCAL',
+        title: item.title,
+        body: item.body,
+        tag: `inbox-${item.id}`,
+        data: { url },
+      });
+      return;
+    }
+    try {
+      const n = new Notification(item.title, {
+        body: item.body,
+        tag: `inbox-${item.id}`,
+        dir: 'rtl',
+        lang: 'ar',
+        data: { url },
+      });
+      n.onclick = () => {
+        window.focus();
+        this.navigateTo(url);
+        n.close();
+      };
+    } catch (err) {
+      console.warn('[push:admin] inbox Notification failed', err);
+    }
+  }
+
+  private navigateTo(url: string): void {
+    const path = url.startsWith('/') ? url : DEFAULT_URL;
+    void this.router.navigateByUrl(path);
   }
 
   private async resolveVapidPublicKey(): Promise<string> {
