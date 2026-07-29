@@ -44,6 +44,25 @@ export class AdminPager {
     const current = this.page();
     const total = this.totalPages();
     if (total <= 1) return [] as Array<number | 'gap'>;
+
+    const compact =
+      typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches;
+
+    if (compact) {
+      // Mobile: current ±1 only (keeps the pager to one short row).
+      const set = new Set<number>([1, total, current]);
+      if (current > 1) set.add(current - 1);
+      if (current < total) set.add(current + 1);
+      const sorted = [...set].sort((a, b) => a - b);
+      const out: Array<number | 'gap'> = [];
+      for (let i = 0; i < sorted.length; i++) {
+        const n = sorted[i]!;
+        if (i > 0 && n - sorted[i - 1]! > 1) out.push('gap');
+        out.push(n);
+      }
+      return out;
+    }
+
     if (total <= 7) {
       return Array.from({ length: total }, (_, i) => i + 1);
     }

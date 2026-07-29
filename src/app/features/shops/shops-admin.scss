@@ -327,15 +327,70 @@ td small {
 }
 
 @media (max-width: 720px) {
+  .shops {
+    overflow: auto;
+    gap: 0.85rem;
+  }
+
   .shops__header {
     flex-direction: column;
   }
 
-  .grid {
-    grid-template-columns: 1fr;
+  .shops__header p {
+    font-size: 0.85rem;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+
+  .search {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 0.15rem;
+  }
+
+  .filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter {
+    flex: 0 0 auto;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
   }
 
   .table-wrap {
+    flex: 1 1 auto;
+    min-height: min(58dvh, 28rem);
     font-size: 0.8rem;
+  }
+
+  th,
+  td {
+    padding: 0.65rem 0.7rem;
+  }
+
+  .row-actions {
+    min-width: 9.5rem;
+  }
+
+  .row-actions .btn {
+    min-height: 2.15rem;
+    padding: 0 0.65rem;
+    font-size: 0.75rem;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
   }
 }
