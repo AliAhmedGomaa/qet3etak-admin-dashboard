@@ -102,8 +102,10 @@ article small {
 }
 
 .actions {
-  display: grid;
+  display: inline-flex;
+  flex-wrap: nowrap;
   gap: 0.4rem;
+  align-items: center;
 }
 
 .btn {
@@ -261,8 +263,5 @@ textarea {
 @media (max-width: 720px) {
   article {
     grid-template-columns: auto 1fr;
-  }
-  .actions {
-    grid-column: 1 / -1;
   }
 }

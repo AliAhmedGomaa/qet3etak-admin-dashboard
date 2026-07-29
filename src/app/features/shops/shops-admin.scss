@@ -207,7 +207,7 @@ td small {
   display: flex;
   gap: 0.35rem;
   justify-content: flex-end;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .btn {
@@ -378,10 +378,6 @@ td small {
   th,
   td {
     padding: 0.65rem 0.7rem;
-  }
-
-  .row-actions {
-    min-width: 9.5rem;
   }
 
   .row-actions .btn {

@@ -220,9 +220,9 @@ th.actions-col {
 
 .tiers-cell {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.35rem;
-  max-width: 16rem;
+  white-space: nowrap;
 }
 
 .tier {

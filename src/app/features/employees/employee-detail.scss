@@ -178,7 +178,7 @@ th {
 .row-actions {
   display: flex;
   gap: 0.35rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .chip {
