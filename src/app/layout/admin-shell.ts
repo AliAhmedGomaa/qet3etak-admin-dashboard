@@ -498,7 +498,7 @@ const BRANCH_MANAGER_PATHS = new Set([
       padding: 1rem 1.15rem;
       padding-left: calc(1.15rem + env(safe-area-inset-left, 0px));
       padding-right: calc(1.15rem + env(safe-area-inset-right, 0px));
-      padding-bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
+      padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
       flex: 1;
       min-height: 0;
       display: flex;
@@ -578,7 +578,7 @@ const BRANCH_MANAGER_PATHS = new Set([
         padding: 1rem;
         padding-left: calc(1rem + env(safe-area-inset-left, 0px));
         padding-right: calc(1rem + env(safe-area-inset-right, 0px));
-        padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+        padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
         flex: 1 1 auto;
         min-height: 0;
       }
@@ -593,7 +593,7 @@ const BRANCH_MANAGER_PATHS = new Set([
       .content {
         padding-left: calc(1.15rem + env(safe-area-inset-left, 0px));
         padding-right: calc(1.15rem + env(safe-area-inset-right, 0px));
-        padding-bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
+        padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
       }
     }
   `,

@@ -216,11 +216,22 @@ table.data-table .row-actions,
   font-size: 0.85rem !important;
 }
 
-/* Keep pagination pinned under the table at the bottom of the page. */
+/* Keep pagination pinned to the bottom edge of the content area. */
 .app-shell-content app-admin-pager {
-  display: block;
+  display: block !important;
   margin-top: auto !important;
-  flex-shrink: 0;
+  margin-bottom: 0 !important;
+  flex-shrink: 0 !important;
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 8;
+}
+
+/* Table grows to fill space above the pager. */
+.app-shell-content .table-wrap,
+.app-shell-content [class*='table-wrap'] {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
 }
 
 /* ——— Dark theme: pierce encapsulated feature panels ——— */
