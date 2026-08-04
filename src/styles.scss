@@ -141,13 +141,24 @@ table.data-table .row-actions,
 
 /* Routed feature hosts must fill the shell content area so lists can scroll. */
 .app-shell-content > *:not(router-outlet) {
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  flex: 1 1 0 !important;
+  align-self: stretch !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  position: relative !important;
+  box-sizing: border-box !important;
   /* Tighter stack so the table + pager get more vertical room. */
   gap: 0.7rem !important;
+}
+
+/* Reserve bottom space only when a top-level pager is actually visible. */
+.app-shell-content > *:not(router-outlet):has(> app-admin-pager .pager) {
+  padding-bottom: 4.5rem !important;
 }
 
 /* Compact page headers / toolbars above every admin table. */
@@ -216,18 +227,19 @@ table.data-table .row-actions,
   font-size: 0.85rem !important;
 }
 
-/* Keep pagination pinned to the bottom edge of the content area. */
-.app-shell-content app-admin-pager {
-  display: block !important;
-  margin-top: auto !important;
-  margin-bottom: 0 !important;
-  flex-shrink: 0 !important;
-  position: sticky !important;
+/* Pin top-level pagination to the absolute bottom of the page. */
+.app-shell-content > *:not(router-outlet) > app-admin-pager {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
   bottom: 0 !important;
-  z-index: 8;
+  width: 100% !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+  z-index: 20;
 }
 
-/* Table grows to fill space above the pager. */
+/* Table grows to fill everything above the pinned pager. */
 .app-shell-content .table-wrap,
 .app-shell-content [class*='table-wrap'] {
   flex: 1 1 auto !important;

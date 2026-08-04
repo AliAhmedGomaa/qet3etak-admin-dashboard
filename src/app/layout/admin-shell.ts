@@ -495,16 +495,17 @@ const BRANCH_MANAGER_PATHS = new Set([
     }
 
     .content {
-      padding: 1rem 1.15rem;
+      padding: 1rem 1.15rem 0;
       padding-left: calc(1.15rem + env(safe-area-inset-left, 0px));
       padding-right: calc(1.15rem + env(safe-area-inset-right, 0px));
-      padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
+      padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
       flex: 1;
       min-height: 0;
       display: flex;
       flex-direction: column;
       overflow: hidden;
       box-sizing: border-box;
+      position: relative;
     }
 
     @media (max-width: 900px) {
@@ -575,10 +576,10 @@ const BRANCH_MANAGER_PATHS = new Set([
       }
 
       .content {
-        padding: 1rem;
+        padding: 1rem 1rem 0;
         padding-left: calc(1rem + env(safe-area-inset-left, 0px));
         padding-right: calc(1rem + env(safe-area-inset-right, 0px));
-        padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
+        padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
         flex: 1 1 auto;
         min-height: 0;
       }
@@ -593,7 +594,7 @@ const BRANCH_MANAGER_PATHS = new Set([
       .content {
         padding-left: calc(1.15rem + env(safe-area-inset-left, 0px));
         padding-right: calc(1.15rem + env(safe-area-inset-right, 0px));
-        padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
+        padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
       }
     }
   `,
