@@ -495,10 +495,10 @@ const BRANCH_MANAGER_PATHS = new Set([
     }
 
     .content {
-      padding: 1.5rem;
-      padding-left: calc(1.5rem + env(safe-area-inset-left, 0px));
-      padding-right: calc(1.5rem + env(safe-area-inset-right, 0px));
-      padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+      padding: 1rem 1.15rem;
+      padding-left: calc(1.15rem + env(safe-area-inset-left, 0px));
+      padding-right: calc(1.15rem + env(safe-area-inset-right, 0px));
+      padding-bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
       flex: 1;
       min-height: 0;
       display: flex;
@@ -586,14 +586,14 @@ const BRANCH_MANAGER_PATHS = new Set([
 
     @media (min-width: 901px) {
       .toolbar {
-        padding: 0 calc(1.5rem + env(safe-area-inset-right, 0px)) 0
-          calc(1.5rem + env(safe-area-inset-left, 0px));
+        padding: 0 calc(1.15rem + env(safe-area-inset-right, 0px)) 0
+          calc(1.15rem + env(safe-area-inset-left, 0px));
       }
 
       .content {
-        padding-left: calc(1.5rem + env(safe-area-inset-left, 0px));
-        padding-right: calc(1.5rem + env(safe-area-inset-right, 0px));
-        padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+        padding-left: calc(1.15rem + env(safe-area-inset-left, 0px));
+        padding-right: calc(1.15rem + env(safe-area-inset-right, 0px));
+        padding-bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
       }
     }
   `,

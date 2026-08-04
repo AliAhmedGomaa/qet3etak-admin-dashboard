@@ -146,6 +146,81 @@ table.data-table .row-actions,
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* Tighter stack so the table + pager get more vertical room. */
+  gap: 0.7rem !important;
+}
+
+/* Compact page headers / toolbars above every admin table. */
+.app-shell-content [class$='__header'],
+.app-shell-content [class$='__head'],
+.app-shell-content > section > header,
+.app-shell-content > *:not(router-outlet) > header {
+  gap: 0.65rem !important;
+  align-items: center !important;
+}
+
+.app-shell-content [class$='__header'] h1,
+.app-shell-content [class$='__head'] h1,
+.app-shell-content > section > header h1,
+.app-shell-content > *:not(router-outlet) > header h1 {
+  font-size: 1.2rem !important;
+  line-height: 1.25 !important;
+}
+
+.app-shell-content [class$='__header'] p,
+.app-shell-content [class$='__head'] p,
+.app-shell-content > section > header p,
+.app-shell-content > *:not(router-outlet) > header p {
+  margin-top: 0.15rem !important;
+  font-size: 0.8rem !important;
+  line-height: 1.4 !important;
+}
+
+.app-shell-content .toolbar,
+.app-shell-content [class*='__toolbar'] {
+  gap: 0.5rem !important;
+}
+
+.app-shell-content .search {
+  min-height: 2.35rem !important;
+  border-radius: 0.7rem !important;
+  box-shadow: none !important;
+  padding-inline: 0.7rem !important;
+}
+
+.app-shell-content .search input {
+  min-height: 2.1rem !important;
+  font-size: 0.85rem !important;
+}
+
+.app-shell-content .search svg {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+.app-shell-content .filter select,
+.app-shell-content .toolbar select,
+.app-shell-content [class*='__toolbar'] select {
+  min-height: 2.35rem !important;
+  border-radius: 0.7rem !important;
+}
+
+.app-shell-content [class$='__header'] .btn,
+.app-shell-content [class$='__actions'] .btn,
+.app-shell-content [class$='__head'] .btn,
+.app-shell-content > section > header .btn,
+.app-shell-content > *:not(router-outlet) > header .btn,
+.app-shell-content .toolbar .btn {
+  min-height: 2.2rem !important;
+  padding-inline: 0.75rem !important;
+  font-size: 0.85rem !important;
+}
+
+/* Keep pagination pinned under the table at the bottom of the page. */
+.app-shell-content app-admin-pager {
+  display: block;
+  margin-top: auto !important;
+  flex-shrink: 0;
 }
 
 /* ——— Dark theme: pierce encapsulated feature panels ——— */

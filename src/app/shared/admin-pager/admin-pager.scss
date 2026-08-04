@@ -1,3 +1,10 @@
+:host {
+  display: block;
+  flex-shrink: 0;
+  margin-top: auto;
+  width: 100%;
+}
+
 .pager {
   display: flex;
   align-items: center;
@@ -5,8 +12,8 @@
   gap: 1rem;
   flex-wrap: wrap;
   flex-shrink: 0;
-  margin-top: 0.15rem;
-  padding: 0.85rem 1rem;
+  margin-top: 0;
+  padding: 0.7rem 0.9rem;
   background: var(--surface, #fff);
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 0.85rem;
