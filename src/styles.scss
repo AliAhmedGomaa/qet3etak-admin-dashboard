@@ -149,11 +149,17 @@ table.data-table .row-actions,
   min-height: 0 !important;
   display: flex !important;
   flex-direction: column !important;
-  overflow: hidden !important;
+  /* Form/detail pages scroll; list pages override to hidden below. */
+  overflow: auto !important;
   position: relative !important;
   box-sizing: border-box !important;
   /* Tighter stack so the table + pager get more vertical room. */
   gap: 0.7rem !important;
+}
+
+/* Table list pages: lock page scroll so the table + pinned pager fill the viewport. */
+.app-shell-content > *:not(router-outlet):has(> app-admin-pager) {
+  overflow: hidden !important;
 }
 
 /* Reserve bottom space only when a top-level pager is actually visible. */

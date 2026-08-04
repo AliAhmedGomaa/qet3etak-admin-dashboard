@@ -1,6 +1,11 @@
 .branding {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1.25rem;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 1.25rem;
 }
 
 .branding__header h1 {
