@@ -281,3 +281,10 @@ td small {
   background: var(--input-bg, #f8fafc);
   color: inherit;
 }
+
+.geo-ok { display: block; color: #166534; font-weight: 600; }
+.geo-missing { display: block; color: #9a3412; font-weight: 600; }
+.geofence { border: 1px solid var(--border, #e2e8f0); border-radius: 0.75rem; padding: 0.85rem; margin: 0.5rem 0; display: grid; gap: 0.65rem; }
+.geofence legend { font-weight: 800; padding: 0 0.35rem; }
+.geo-hint { margin: 0; font-size: 0.8rem; }
+.geofence .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.65rem; }

@@ -17,6 +17,9 @@ export interface Branch {
   phone: string;
   notes: string;
   status: BranchStatus;
+  geofenceLat?: number | null;
+  geofenceLng?: number | null;
+  geofenceRadiusMeters?: number | null;
   managerUserId?: string | null;
   manager?: BranchManagerRef | null;
   createdAt?: string;
@@ -38,6 +41,9 @@ export interface CreateBranchPayload {
   phone?: string;
   notes?: string;
   status?: BranchStatus;
+  geofenceLat?: number;
+  geofenceLng?: number;
+  geofenceRadiusMeters?: number;
 }
 
 export type UpdateBranchPayload = Partial<CreateBranchPayload>;

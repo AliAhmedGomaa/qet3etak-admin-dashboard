@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 import { PageParams, Paginated } from '../pagination';
 
 export type DeliveryGuyStatus = 'ACTIVE' | 'INACTIVE';
-export type DeliveryFeeModel = 'FLAT' | 'PERCENT' | 'BASE_PLUS_ITEMS';
+export type DeliveryFeeModel = 'FLAT' | 'PERCENT' | 'BASE_PLUS_ITEMS' | 'HOURLY';
 
 export interface DeliveryGuy {
   id: string;
@@ -20,6 +20,7 @@ export interface DeliveryGuy {
   percentRate: number;
   baseFee: number;
   perItemFee: number;
+  hourlyRate: number;
   totalDeliveries: number;
   totalFeesEarned: number;
   createdAt?: string;
@@ -39,6 +40,7 @@ export type DeliveryGuyInput = {
   percentRate?: number;
   baseFee?: number;
   perItemFee?: number;
+  hourlyRate?: number;
 };
 
 @Injectable({ providedIn: 'root' })

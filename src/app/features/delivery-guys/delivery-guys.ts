@@ -24,6 +24,7 @@ const FEE_LABELS: Record<DeliveryFeeModel, string> = {
   FLAT: 'مبلغ ثابت لكل توصيلة',
   PERCENT: 'نسبة من قيمة الطلب',
   BASE_PLUS_ITEMS: 'أساسي + لكل قطعة',
+  HOURLY: 'أجر بالساعة (حسب ساعات العمل)',
 };
 
 @Component({
@@ -58,6 +59,7 @@ export class DeliveryGuysPage implements OnInit {
       { value: 'FLAT', label: FEE_LABELS.FLAT },
       { value: 'PERCENT', label: FEE_LABELS.PERCENT },
       { value: 'BASE_PLUS_ITEMS', label: FEE_LABELS.BASE_PLUS_ITEMS },
+      { value: 'HOURLY', label: FEE_LABELS.HOURLY },
     ];
 
   protected readonly form = this.fb.nonNullable.group({
@@ -73,6 +75,7 @@ export class DeliveryGuysPage implements OnInit {
     percentRate: [0, [Validators.min(0)]],
     baseFee: [20, [Validators.min(0)]],
     perItemFee: [2, [Validators.min(0)]],
+    hourlyRate: [25, [Validators.min(0)]],
   });
 
   ngOnInit(): void {
@@ -89,6 +92,8 @@ export class DeliveryGuysPage implements OnInit {
         return `${guy.percentRate}% من الطلب`;
       case 'BASE_PLUS_ITEMS':
         return `${guy.baseFee} + ${guy.perItemFee}×قطعة`;
+      case 'HOURLY':
+        return `${guy.hourlyRate} ج.م / ساعة`;
       default:
         return `${guy.flatFee} ج.م / توصيلة`;
     }
@@ -163,6 +168,7 @@ export class DeliveryGuysPage implements OnInit {
       percentRate: 0,
       baseFee: 20,
       perItemFee: 2,
+      hourlyRate: 25,
     });
     this.form.controls.password.setValidators([
       Validators.required,
@@ -188,6 +194,7 @@ export class DeliveryGuysPage implements OnInit {
       percentRate: guy.percentRate,
       baseFee: guy.baseFee,
       perItemFee: guy.perItemFee,
+      hourlyRate: guy.hourlyRate ?? 25,
     });
     this.form.controls.password.clearValidators();
     this.form.controls.password.setValidators([Validators.minLength(6)]);
@@ -206,6 +213,7 @@ export class DeliveryGuysPage implements OnInit {
     if (v.feeModel === 'PERCENT') fee = (1500 * (v.percentRate || 0)) / 100;
     else if (v.feeModel === 'BASE_PLUS_ITEMS')
       fee = (v.baseFee || 0) + 5 * (v.perItemFee || 0);
+    else if (v.feeModel === 'HOURLY') fee = v.hourlyRate || 0;
     else fee = v.flatFee || 0;
     this.feePreview.set(Number(fee.toFixed(2)));
   }
@@ -233,6 +241,7 @@ export class DeliveryGuysPage implements OnInit {
       percentRate: value.percentRate,
       baseFee: value.baseFee,
       perItemFee: value.perItemFee,
+      hourlyRate: value.hourlyRate,
     };
     if (value.password.trim()) {
       payload.password = value.password.trim();

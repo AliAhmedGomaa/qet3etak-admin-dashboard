@@ -70,6 +70,13 @@
               <td>
                 <strong>{{ branch.name }}</strong>
                 <small>{{ branch.address }}</small>
+                @if (branch.geofenceLat != null && branch.geofenceLng != null) {
+                  <small class="geo-ok" dir="ltr">
+                    Geofence · {{ branch.geofenceRadiusMeters || '—' }}m
+                  </small>
+                } @else {
+                  <small class="geo-missing">بدون نطاق موقع</small>
+                }
               </td>
               <td dir="ltr">{{ branch.code }}</td>
               <td>{{ branch.city }}</td>
@@ -153,6 +160,28 @@
             <option value="INACTIVE">متوقف</option>
           </select>
         </label>
+
+        <fieldset class="geofence">
+          <legend>نطاق موقع العمل (للمندوبين)</legend>
+          <p class="muted geo-hint">
+            يجب ضبط الإحداثيات ونصف القطر حتى يتمكن المندوب من تسجيل الدخول داخل الموقع فقط.
+          </p>
+          <div class="grid">
+            <label>
+              خط العرض (Latitude)
+              <input type="number" step="any" formControlName="geofenceLat" dir="ltr" placeholder="30.0444" />
+            </label>
+            <label>
+              خط الطول (Longitude)
+              <input type="number" step="any" formControlName="geofenceLng" dir="ltr" placeholder="31.2357" />
+            </label>
+            <label>
+              نصف القطر (متر)
+              <input type="number" min="10" step="1" formControlName="geofenceRadiusMeters" dir="ltr" />
+            </label>
+          </div>
+        </fieldset>
+
         <footer>
           <button type="button" class="btn btn-ghost" (click)="closeEditor()">إلغاء</button>
           <button type="submit" class="btn btn-primary" [disabled]="saving()">

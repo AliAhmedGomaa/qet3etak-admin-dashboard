@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { PageParams, Paginated } from '../pagination';
 
-export type OrderStatus = 'RECEIVED' | 'PREPARING' | 'SHIPPED' | 'DELIVERED';
+export type OrderStatus = 'RECEIVED' | 'SHIPPED' | 'DELIVERED';
 
 export interface AdminWallet {
   id: string;

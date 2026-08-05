@@ -21,7 +21,6 @@ import { AdminPager } from '../../shared/admin-pager/admin-pager';
 
 const COLUMNS: Array<{ status: OrderStatus; title: string }> = [
   { status: 'RECEIVED', title: orderStatusAr['RECEIVED'] },
-  { status: 'PREPARING', title: orderStatusAr['PREPARING'] },
   { status: 'SHIPPED', title: orderStatusAr['SHIPPED'] },
   { status: 'DELIVERED', title: orderStatusAr['DELIVERED'] },
 ];

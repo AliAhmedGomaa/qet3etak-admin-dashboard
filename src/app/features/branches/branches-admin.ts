@@ -57,6 +57,9 @@ export class BranchesAdmin implements OnInit {
     phone: [''],
     notes: [''],
     status: this.fb.nonNullable.control<BranchStatus>('ACTIVE'),
+    geofenceLat: this.fb.control<number | null>(null),
+    geofenceLng: this.fb.control<number | null>(null),
+    geofenceRadiusMeters: this.fb.control<number | null>(150),
   });
 
   ngOnInit(): void {
@@ -153,6 +156,9 @@ export class BranchesAdmin implements OnInit {
       phone: '',
       notes: '',
       status: 'ACTIVE',
+      geofenceLat: null,
+      geofenceLng: null,
+      geofenceRadiusMeters: 150,
     });
     this.editorOpen.set(true);
   }
@@ -167,6 +173,9 @@ export class BranchesAdmin implements OnInit {
       phone: branch.phone || '',
       notes: branch.notes || '',
       status: branch.status,
+      geofenceLat: branch.geofenceLat ?? null,
+      geofenceLng: branch.geofenceLng ?? null,
+      geofenceRadiusMeters: branch.geofenceRadiusMeters ?? 150,
     });
     this.editorOpen.set(true);
   }
@@ -191,6 +200,15 @@ export class BranchesAdmin implements OnInit {
       phone: raw.phone.trim() || undefined,
       notes: raw.notes.trim() || undefined,
       status: raw.status,
+      ...(raw.geofenceLat != null &&
+      raw.geofenceLng != null &&
+      raw.geofenceRadiusMeters != null
+        ? {
+            geofenceLat: Number(raw.geofenceLat),
+            geofenceLng: Number(raw.geofenceLng),
+            geofenceRadiusMeters: Number(raw.geofenceRadiusMeters),
+          }
+        : {}),
     };
     const req$ = id
       ? this.api.update(id, payload)

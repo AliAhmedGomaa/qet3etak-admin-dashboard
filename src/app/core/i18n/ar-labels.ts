@@ -7,7 +7,6 @@ export const qualityGradeAr: Record<string, string> = {
 
 export const orderStatusAr: Record<string, string> = {
   RECEIVED: 'مستلم',
-  PREPARING: 'قيد التجهيز',
   SHIPPED: 'تم الشحن',
   DELIVERED: 'تم التسليم',
 };

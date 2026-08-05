@@ -181,6 +181,12 @@
               </label>
             </div>
           }
+          @if (form.controls.feeModel.value === 'HOURLY') {
+            <label>
+              الأجر لكل ساعة عمل (ج.م)
+              <input type="number" min="0" step="1" formControlName="hourlyRate" />
+            </label>
+          }
 
           <label>
             ملاحظات
@@ -189,7 +195,9 @@
 
           <div class="preview">
             <button type="button" class="btn btn-ghost" (click)="previewFee()">
-              معاينة الأجر (طلب 1500 ج.م / 5 قطع)
+              {{ form.controls.feeModel.value === 'HOURLY'
+                ? 'معاينة الأجر لساعة واحدة
+                : 'معاينة الأجر (طلب 1500 ج.م / 5 قطع)' }}
             </button>
             @if (feePreview() !== null) {
               <strong>{{ feePreview() | currency: 'EGP':'symbol-narrow':'1.0-2' }}</strong>
