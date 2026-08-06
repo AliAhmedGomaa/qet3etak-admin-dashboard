@@ -6,7 +6,7 @@
 .install-banner {
   pointer-events: auto;
   position: fixed;
-  z-index: 80;
+  z-index: 35;
   bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   left: calc(1rem + env(safe-area-inset-left, 0px));
   right: calc(1rem + env(safe-area-inset-right, 0px));

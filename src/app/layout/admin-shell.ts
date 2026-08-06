@@ -534,10 +534,14 @@ const BRANCH_MANAGER_PATHS = new Set([
         transform: translateX(110%);
         transition: transform 0.22s ease;
         box-shadow: -8px 0 32px rgba(15, 23, 42, 0.25);
+        pointer-events: none;
+        visibility: hidden;
       }
 
       .shell--nav-open .sidebar {
         transform: translateX(0);
+        pointer-events: auto;
+        visibility: visible;
       }
 
       .main {
