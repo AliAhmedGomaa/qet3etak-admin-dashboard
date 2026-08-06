@@ -148,7 +148,10 @@
             </label>
             <label>
               نموذج حساب الأجر
-              <select formControlName="feeModel" (change)="feePreview.set(null)">
+              <select
+                formControlName="feeModel"
+                (change)="onFeeModelChange($any($event.target).value)"
+              >
                 @for (m of feeModels; track m.value) {
                   <option [value]="m.value">{{ m.label }}</option>
                 }
@@ -156,19 +159,21 @@
             </label>
           </div>
 
-          @if (form.controls.feeModel.value === 'FLAT') {
+          <p class="fee-hint">{{ feeHint(selectedFeeModel()) }}</p>
+
+          @if (selectedFeeModel() === 'FLAT') {
             <label>
               الأجر الثابت لكل توصيلة (ج.م)
               <input type="number" min="0" step="1" formControlName="flatFee" />
             </label>
           }
-          @if (form.controls.feeModel.value === 'PERCENT') {
+          @if (selectedFeeModel() === 'PERCENT') {
             <label>
               النسبة من قيمة الطلب (%)
               <input type="number" min="0" step="0.1" formControlName="percentRate" />
             </label>
           }
-          @if (form.controls.feeModel.value === 'BASE_PLUS_ITEMS') {
+          @if (selectedFeeModel() === 'BASE_PLUS_ITEMS') {
             <div class="grid">
               <label>
                 الأجر الأساسي (ج.م)
@@ -180,10 +185,13 @@
               </label>
             </div>
           }
-          @if (form.controls.feeModel.value === 'HOURLY') {
+          @if (selectedFeeModel() === 'HOURLY') {
             <label>
-              الأجر لكل ساعة عمل (ج.م)
-              <input type="number" min="0" step="1" formControlName="hourlyRate" />
+              سعر الساعة للمندوب (ج.م / ساعة عمل)
+              <input type="number" min="1" step="1" formControlName="hourlyRate" />
+              <small class="notes">
+                يُحسب من وقت تسجيل الحضور حتى الانصراف في موقع العمل — وليس عن كل طلب توصيل.
+              </small>
             </label>
           }
 
@@ -193,15 +201,29 @@
           </label>
 
           <div class="preview">
-            <button type="button" class="btn btn-ghost" (click)="previewFee()">
-              {{ form.controls.feeModel.value === 'HOURLY'
-                ? 'معاينة الأجر لساعة واحدة
-                : 'معاينة الأجر (طلب 1500 ج.م / 5 قطع)' }}
-            </button>
+            @if (selectedFeeModel() === 'HOURLY') {
+              <button type="button" class="btn btn-ghost" (click)="previewFee()">
+                معاينة أجر ساعة عمل واحدة
+              </button>
+            } @else {
+              <button type="button" class="btn btn-ghost" (click)="previewFee()">
+                معاينة أجر توصيلة (مثال: طلب 1500 ج.م / 5 قطع)
+              </button>
+            }
             @if (feePreview() !== null) {
-              <strong>{{ feePreview() | currency: 'EGP':'symbol-narrow':'1.0-2' }}</strong>
+              <strong>
+                @if (selectedFeeModel() === 'HOURLY') {
+                  {{ feePreview() | currency: 'EGP':'symbol-narrow':'1.0-2' }} لكل ساعة
+                } @else {
+                  {{ feePreview() | currency: 'EGP':'symbol-narrow':'1.0-2' }} للتوصيلة
+                }
+              </strong>
             }
           </div>
+
+          @if (editorError()) {
+            <p class="err">{{ editorError() }}</p>
+          }
 
           <footer>
             <button type="button" class="btn btn-ghost" (click)="closeEditor()">إلغاء</button>

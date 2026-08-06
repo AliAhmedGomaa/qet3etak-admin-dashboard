@@ -24,7 +24,15 @@ const FEE_LABELS: Record<DeliveryFeeModel, string> = {
   FLAT: 'مبلغ ثابت لكل توصيلة',
   PERCENT: 'نسبة من قيمة الطلب',
   BASE_PLUS_ITEMS: 'أساسي + لكل قطعة',
-  HOURLY: 'أجر بالساعة (حسب ساعات العمل)',
+  HOURLY: 'أجر بالساعة (وقت العمل)',
+};
+
+const FEE_HINTS: Record<DeliveryFeeModel, string> = {
+  FLAT: 'يُحسب مبلغ ثابت عن كل طلب يتم توصيله.',
+  PERCENT: 'نسبة مئوية من إجمالي قيمة الطلب.',
+  BASE_PLUS_ITEMS: 'أجر أساسي للطلب + مبلغ إضافي عن كل قطعة.',
+  HOURLY:
+    'أجر حسب ساعات الحضور من تسجيل الدخول حتى الانصراف — ليس عن كل توصيلة.',
 };
 
 @Component({
@@ -53,6 +61,8 @@ export class DeliveryGuysPage implements OnInit {
   protected readonly deleteTarget = signal<DeliveryGuy | null>(null);
   protected readonly deleting = signal(false);
   protected readonly feePreview = signal<number | null>(null);
+  protected readonly editorError = signal<string | null>(null);
+  protected readonly selectedFeeModel = signal<DeliveryFeeModel>('FLAT');
 
   protected readonly feeModels: Array<{ value: DeliveryFeeModel; label: string }> =
     [
@@ -61,6 +71,10 @@ export class DeliveryGuysPage implements OnInit {
       { value: 'BASE_PLUS_ITEMS', label: FEE_LABELS.BASE_PLUS_ITEMS },
       { value: 'HOURLY', label: FEE_LABELS.HOURLY },
     ];
+
+  protected feeHint(model: DeliveryFeeModel): string {
+    return FEE_HINTS[model];
+  }
 
   protected readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(2)]],
@@ -155,6 +169,8 @@ export class DeliveryGuysPage implements OnInit {
   protected openCreate(): void {
     this.editingId.set(null);
     this.feePreview.set(null);
+    this.editorError.set(null);
+    this.selectedFeeModel.set('FLAT');
     this.form.reset({
       fullName: '',
       phone: '',
@@ -181,20 +197,23 @@ export class DeliveryGuysPage implements OnInit {
   protected openEdit(guy: DeliveryGuy): void {
     this.editingId.set(guy.id);
     this.feePreview.set(null);
+    this.editorError.set(null);
+    const model = guy.feeModel || 'FLAT';
+    this.selectedFeeModel.set(model);
     this.form.patchValue({
       fullName: guy.fullName,
       phone: guy.phone,
       password: '',
-      city: guy.city,
-      vehicleType: guy.vehicleType,
-      notes: guy.notes,
+      city: guy.city ?? '',
+      vehicleType: guy.vehicleType ?? '',
+      notes: guy.notes ?? '',
       status: guy.status,
-      feeModel: guy.feeModel,
-      flatFee: guy.flatFee,
-      percentRate: guy.percentRate,
-      baseFee: guy.baseFee,
-      perItemFee: guy.perItemFee,
-      hourlyRate: guy.hourlyRate ?? 25,
+      feeModel: model,
+      flatFee: Number(guy.flatFee) || 0,
+      percentRate: Number(guy.percentRate) || 0,
+      baseFee: Number(guy.baseFee) || 0,
+      perItemFee: Number(guy.perItemFee) || 0,
+      hourlyRate: Number(guy.hourlyRate) > 0 ? Number(guy.hourlyRate) : 25,
     });
     this.form.controls.password.clearValidators();
     this.form.controls.password.setValidators([Validators.minLength(6)]);
@@ -205,43 +224,60 @@ export class DeliveryGuysPage implements OnInit {
   protected closeEditor(): void {
     this.editorOpen.set(false);
     this.editingId.set(null);
+    this.editorError.set(null);
+  }
+
+  protected onFeeModelChange(value: string): void {
+    const model = value as DeliveryFeeModel;
+    this.selectedFeeModel.set(model);
+    this.feePreview.set(null);
+    this.editorError.set(null);
   }
 
   protected previewFee(): void {
     const v = this.form.getRawValue();
     let fee = 0;
-    if (v.feeModel === 'PERCENT') fee = (1500 * (v.percentRate || 0)) / 100;
+    if (v.feeModel === 'PERCENT') fee = (1500 * (Number(v.percentRate) || 0)) / 100;
     else if (v.feeModel === 'BASE_PLUS_ITEMS')
-      fee = (v.baseFee || 0) + 5 * (v.perItemFee || 0);
-    else if (v.feeModel === 'HOURLY') fee = v.hourlyRate || 0;
-    else fee = v.flatFee || 0;
+      fee = (Number(v.baseFee) || 0) + 5 * (Number(v.perItemFee) || 0);
+    else if (v.feeModel === 'HOURLY') fee = Number(v.hourlyRate) || 0;
+    else fee = Number(v.flatFee) || 0;
     this.feePreview.set(Number(fee.toFixed(2)));
   }
 
   protected save(): void {
+    this.editorError.set(null);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.editorError.set('راجع الحقول المطلوبة ثم حاول مرة أخرى');
       return;
     }
+    const value = this.form.getRawValue();
+    const feeModel = value.feeModel;
+    const hourlyRate = Number(value.hourlyRate) || 0;
+    if (feeModel === 'HOURLY' && hourlyRate <= 0) {
+      this.editorError.set('يجب تحديد سعر الساعة (ج.م) أكبر من صفر');
+      return;
+    }
+
     this.saving.set(true);
     this.error.set(null);
-    const value = this.form.getRawValue();
     const payload: Partial<DeliveryGuyInput> & {
       fullName: string;
       phone: string;
     } = {
-      fullName: value.fullName,
-      phone: value.phone,
-      city: value.city,
-      vehicleType: value.vehicleType,
-      notes: value.notes,
+      fullName: value.fullName.trim(),
+      phone: value.phone.trim(),
+      city: value.city.trim(),
+      vehicleType: value.vehicleType.trim(),
+      notes: value.notes.trim(),
       status: value.status,
-      feeModel: value.feeModel,
-      flatFee: value.flatFee,
-      percentRate: value.percentRate,
-      baseFee: value.baseFee,
-      perItemFee: value.perItemFee,
-      hourlyRate: value.hourlyRate,
+      feeModel,
+      flatFee: Number(value.flatFee) || 0,
+      percentRate: Number(value.percentRate) || 0,
+      baseFee: Number(value.baseFee) || 0,
+      perItemFee: Number(value.perItemFee) || 0,
+      hourlyRate,
     };
     if (value.password.trim()) {
       payload.password = value.password.trim();
@@ -258,13 +294,13 @@ export class DeliveryGuysPage implements OnInit {
       error: (err: { error?: { message?: string | string[] } }) => {
         this.saving.set(false);
         const msg = err.error?.message;
-        this.error.set(
-          Array.isArray(msg)
-            ? msg.join(' · ')
-            : typeof msg === 'string'
-              ? msg
-              : 'تعذر حفظ المندوب',
-        );
+        const text = Array.isArray(msg)
+          ? msg.join(' · ')
+          : typeof msg === 'string'
+            ? msg
+            : 'تعذر حفظ المندوب';
+        this.editorError.set(text);
+        this.error.set(text);
       },
     });
   }
