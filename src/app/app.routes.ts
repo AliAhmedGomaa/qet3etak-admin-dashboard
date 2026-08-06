@@ -83,14 +83,6 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'data-import',
-        canActivate: [permissionGuard('import.manage')],
-        loadComponent: () =>
-          import('./features/data-import/data-import').then(
-            (m) => m.DataImportPage,
-          ),
-      },
-      {
         path: 'credit',
         canActivate: [permissionGuard('credit.read')],
         loadComponent: () =>
