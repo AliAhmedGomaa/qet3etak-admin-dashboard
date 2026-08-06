@@ -13,6 +13,7 @@ import {
 import {
   Branch,
   BranchStatus,
+  GeofencePoint,
 } from '../../core/branches/branch.models';
 import { BranchesAdminService } from '../../core/branches/branches-admin.service';
 import { AdminUsersService } from '../../core/users/admin-users.service';
@@ -49,6 +50,7 @@ export class BranchesAdmin implements OnInit {
   protected readonly managerTarget = signal<Branch | null>(null);
   protected readonly managerUserId = signal<string>('');
   protected readonly assigning = signal(false);
+  protected readonly geofencePolygon = signal<GeofencePoint[]>([]);
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -58,9 +60,6 @@ export class BranchesAdmin implements OnInit {
     phone: [''],
     notes: [''],
     status: this.fb.nonNullable.control<BranchStatus>('ACTIVE'),
-    geofenceLat: this.fb.control<number | null>(null),
-    geofenceLng: this.fb.control<number | null>(null),
-    geofenceRadiusMeters: this.fb.control<number | null>(150),
   });
 
   ngOnInit(): void {
@@ -149,6 +148,7 @@ export class BranchesAdmin implements OnInit {
 
   protected openCreate(): void {
     this.editingId.set(null);
+    this.geofencePolygon.set([]);
     this.form.reset({
       name: '',
       code: '',
@@ -157,15 +157,17 @@ export class BranchesAdmin implements OnInit {
       phone: '',
       notes: '',
       status: 'ACTIVE',
-      geofenceLat: null,
-      geofenceLng: null,
-      geofenceRadiusMeters: 150,
     });
     this.editorOpen.set(true);
   }
 
   protected openEdit(branch: Branch): void {
     this.editingId.set(branch.id);
+    this.geofencePolygon.set(
+      Array.isArray(branch.geofencePolygon)
+        ? branch.geofencePolygon.map((p) => ({ lat: p.lat, lng: p.lng }))
+        : [],
+    );
     this.form.reset({
       name: branch.name,
       code: branch.code,
@@ -174,9 +176,6 @@ export class BranchesAdmin implements OnInit {
       phone: branch.phone || '',
       notes: branch.notes || '',
       status: branch.status,
-      geofenceLat: branch.geofenceLat ?? null,
-      geofenceLng: branch.geofenceLng ?? null,
-      geofenceRadiusMeters: branch.geofenceRadiusMeters ?? 150,
     });
     this.editorOpen.set(true);
   }
@@ -184,20 +183,31 @@ export class BranchesAdmin implements OnInit {
   protected closeEditor(): void {
     this.editorOpen.set(false);
     this.editingId.set(null);
+    this.geofencePolygon.set([]);
   }
 
-  protected onMapPosition(pos: { lat: number; lng: number }): void {
-    this.form.patchValue({
-      geofenceLat: pos.lat,
-      geofenceLng: pos.lng,
-    });
+  protected onPolygonChange(points: GeofencePoint[]): void {
+    this.geofencePolygon.set(points);
   }
 
   protected onMapCleared(): void {
-    this.form.patchValue({
-      geofenceLat: null,
-      geofenceLng: null,
-    });
+    this.geofencePolygon.set([]);
+  }
+
+  protected editingBranch(): Branch | null {
+    const id = this.editingId();
+    if (!id) return null;
+    return this.branches().find((b) => b.id === id) ?? null;
+  }
+
+  protected hasGeofence(branch: Branch): boolean {
+    return (
+      (Array.isArray(branch.geofencePolygon) &&
+        branch.geofencePolygon.length >= 3) ||
+      (branch.geofenceLat != null &&
+        branch.geofenceLng != null &&
+        (branch.geofenceRadiusMeters ?? 0) > 0)
+    );
   }
 
   protected save(): void {
@@ -207,6 +217,7 @@ export class BranchesAdmin implements OnInit {
     this.saving.set(true);
     this.error.set(null);
     const id = this.editingId();
+    const poly = this.geofencePolygon();
     const payload = {
       name: raw.name.trim(),
       code: raw.code.trim(),
@@ -215,15 +226,11 @@ export class BranchesAdmin implements OnInit {
       phone: raw.phone.trim() || undefined,
       notes: raw.notes.trim() || undefined,
       status: raw.status,
-      ...(raw.geofenceLat != null &&
-      raw.geofenceLng != null &&
-      raw.geofenceRadiusMeters != null
-        ? {
-            geofenceLat: Number(raw.geofenceLat),
-            geofenceLng: Number(raw.geofenceLng),
-            geofenceRadiusMeters: Number(raw.geofenceRadiusMeters),
-          }
-        : {}),
+      ...(poly.length >= 3
+        ? { geofencePolygon: poly }
+        : id
+          ? { geofencePolygon: [] as GeofencePoint[] }
+          : {}),
     };
     const req$ = id
       ? this.api.update(id, payload)

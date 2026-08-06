@@ -70,10 +70,8 @@
               <td>
                 <strong>{{ branch.name }}</strong>
                 <small>{{ branch.address }}</small>
-                @if (branch.geofenceLat != null && branch.geofenceLng != null) {
-                  <small class="geo-ok" dir="ltr">
-                    Geofence · {{ branch.geofenceRadiusMeters || '—' }}m
-                  </small>
+                @if (hasGeofence(branch)) {
+                  <small class="geo-ok">نطاق موقع مرسوم</small>
                 } @else {
                   <small class="geo-missing">بدون نطاق موقع</small>
                 }
@@ -164,22 +162,13 @@
         <fieldset class="geofence">
           <legend>نطاق موقع العمل (للمندوبين)</legend>
           <app-geofence-map-picker
-            [lat]="form.controls.geofenceLat.value"
-            [lng]="form.controls.geofenceLng.value"
-            [radiusMeters]="form.controls.geofenceRadiusMeters.value || 150"
-            (positionChange)="onMapPosition($event)"
+            [polygon]="geofencePolygon()"
+            [legacyLat]="editingBranch()?.geofenceLat ?? null"
+            [legacyLng]="editingBranch()?.geofenceLng ?? null"
+            [legacyRadiusMeters]="editingBranch()?.geofenceRadiusMeters ?? null"
+            (polygonChange)="onPolygonChange($event)"
             (cleared)="onMapCleared()"
           />
-          <label class="radius">
-            نصف قطر النطاق (متر)
-            <input
-              type="number"
-              min="10"
-              step="10"
-              formControlName="geofenceRadiusMeters"
-              dir="ltr"
-            />
-          </label>
         </fieldset>
 
         <footer>

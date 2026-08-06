@@ -8,6 +8,11 @@ export interface BranchManagerRef {
   status: string;
 }
 
+export interface GeofencePoint {
+  lat: number;
+  lng: number;
+}
+
 export interface Branch {
   id: string;
   name: string;
@@ -20,6 +25,7 @@ export interface Branch {
   geofenceLat?: number | null;
   geofenceLng?: number | null;
   geofenceRadiusMeters?: number | null;
+  geofencePolygon?: GeofencePoint[] | null;
   managerUserId?: string | null;
   manager?: BranchManagerRef | null;
   createdAt?: string;
@@ -41,6 +47,7 @@ export interface CreateBranchPayload {
   phone?: string;
   notes?: string;
   status?: BranchStatus;
+  geofencePolygon?: GeofencePoint[];
   geofenceLat?: number;
   geofenceLng?: number;
   geofenceRadiusMeters?: number;

@@ -12,19 +12,17 @@ import {
 } from '@angular/core';
 import * as L from 'leaflet';
 
-const DEFAULT_CENTER: L.LatLngExpression = [30.0444, 31.2357]; // Cairo
-const DEFAULT_ZOOM = 14;
+export type GeofencePoint = { lat: number; lng: number };
 
-/** Leaflet default marker icons break under Angular bundling — use copied public assets. */
-const markerIcon = L.icon({
-  iconUrl: 'leaflet/marker-icon.png',
-  iconRetinaUrl: 'leaflet/marker-icon-2x.png',
-  shadowUrl: 'leaflet/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+const DEFAULT_CENTER: L.LatLngExpression = [30.0444, 31.2357];
+const DEFAULT_ZOOM = 15;
+
+const POLY_STYLE: L.PolylineOptions = {
+  color: '#10b880',
+  weight: 3,
+  fillColor: '#10b880',
+  fillOpacity: 0.22,
+};
 
 @Component({
   selector: 'app-geofence-map-picker',
@@ -32,17 +30,38 @@ const markerIcon = L.icon({
   template: `
     <div class="picker" dir="rtl">
       <p class="hint">
-        اضغط على الخريطة لتحديد موقع الفرع. الدائرة توضح نطاق تسجيل دخول المندوبين.
+        ارسم حدود موقع العمل على الخريطة: اضغط لإضافة نقاط، ثم اضغط «إنهاء الرسم» لإغلاق الشكل.
+        يمكن سحب النقاط بعد الرسم لتعديل الحدود.
       </p>
       <div class="actions">
         <button type="button" class="btn" (click)="useMyLocation()" [disabled]="locating()">
           {{ locating() ? 'جارٍ تحديد موقعك…' : 'موقعي الحالي' }}
         </button>
-        <button type="button" class="btn ghost" (click)="clearPin()" [disabled]="!hasPin()">
-          مسح الموقع
+        @if (drawing() && draftCount() >= 3) {
+          <button type="button" class="btn" (click)="finishDrawing()">إنهاء الرسم</button>
+        }
+        <button
+          type="button"
+          class="btn ghost"
+          (click)="clearAll()"
+          [disabled]="!hasShape() && draftCount() === 0"
+        >
+          مسح الرسم
         </button>
       </div>
-      <div #mapHost class="map" role="application" aria-label="خريطة موقع الفرع"></div>
+      @if (drawing()) {
+        <p class="status">
+          نقاط مرسومة: {{ draftCount() }}
+          @if (draftCount() < 3) {
+            — أضف {{ 3 - draftCount() }} على الأقل
+          } @else {
+            — جاهز للإنهاء
+          }
+        </p>
+      } @else if (hasShape()) {
+        <p class="status ok">تم رسم نطاق العمل · يمكنك سحب النقاط للتعديل</p>
+      }
+      <div #mapHost class="map" role="application" aria-label="رسم نطاق موقع الفرع"></div>
       @if (error()) {
         <p class="err">{{ error() }}</p>
       }
@@ -84,13 +103,23 @@ const markerIcon = L.icon({
       color: var(--ink, #0f172a);
       border: 1.5px solid var(--border, #e2e8f0);
     }
+    .status {
+      margin: 0;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--ink-muted, #64748b);
+    }
+    .status.ok {
+      color: #0d9a6a;
+    }
     .map {
-      height: 16rem;
+      height: 18rem;
       width: 100%;
       border-radius: 0.85rem;
       border: 1px solid var(--border, #e2e8f0);
       overflow: hidden;
       z-index: 0;
+      cursor: crosshair;
     }
     .err {
       margin: 0;
@@ -104,10 +133,13 @@ const markerIcon = L.icon({
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
-  readonly lat = input<number | null>(null);
-  readonly lng = input<number | null>(null);
-  readonly radiusMeters = input<number>(150);
-  readonly positionChange = output<{ lat: number; lng: number }>();
+  readonly polygon = input<GeofencePoint[] | null>(null);
+  /** Legacy circle fallback for older branches without a drawn polygon. */
+  readonly legacyLat = input<number | null>(null);
+  readonly legacyLng = input<number | null>(null);
+  readonly legacyRadiusMeters = input<number | null>(null);
+
+  readonly polygonChange = output<GeofencePoint[]>();
   readonly cleared = output<void>();
 
   private readonly mapHost =
@@ -115,45 +147,45 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
 
   protected readonly locating = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly hasPin = signal(false);
+  protected readonly drawing = signal(true);
+  protected readonly draftCount = signal(0);
+  protected readonly hasShape = signal(false);
 
   private map?: L.Map;
-  private marker?: L.Marker;
-  private circle?: L.Circle;
+  private draftLine?: L.Polyline;
+  private polygonLayer?: L.Polygon;
+  private vertexMarkers: L.CircleMarker[] = [];
+  private draftPoints: L.LatLng[] = [];
   private ready = false;
   private skipNextInputSync = false;
 
   constructor() {
     effect(() => {
-      const lat = this.lat();
-      const lng = this.lng();
-      const radius = this.radiusMeters() || 150;
+      const poly = this.polygon();
       if (!this.ready || !this.map) return;
-
       if (this.skipNextInputSync) {
         this.skipNextInputSync = false;
-        this.syncCircleRadius(radius);
         return;
       }
-
-      if (lat != null && lng != null) {
-        this.setPin(lat, lng, false);
-        this.map.setView([lat, lng], Math.max(this.map.getZoom(), DEFAULT_ZOOM));
+      if (poly && poly.length >= 3) {
+        this.showFinishedPolygon(poly.map((p) => L.latLng(p.lat, p.lng)), false);
       } else {
-        this.removePinVisual();
+        this.showLegacyOrEmpty();
       }
-      this.syncCircleRadius(radius);
     });
   }
 
   ngAfterViewInit(): void {
     const el = this.mapHost().nativeElement;
-    const startLat = this.lat();
-    const startLng = this.lng();
+    const poly = this.polygon();
+    const legacyLat = this.legacyLat();
+    const legacyLng = this.legacyLng();
     const center: L.LatLngExpression =
-      startLat != null && startLng != null
-        ? [startLat, startLng]
-        : DEFAULT_CENTER;
+      poly && poly.length
+        ? [poly[0].lat, poly[0].lng]
+        : legacyLat != null && legacyLng != null
+          ? [legacyLat, legacyLng]
+          : DEFAULT_CENTER;
 
     this.map = L.map(el, {
       center,
@@ -167,25 +199,25 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     }).addTo(this.map);
 
     this.map.on('click', (e: L.LeafletMouseEvent) => {
-      this.setPin(e.latlng.lat, e.latlng.lng, true);
+      if (!this.drawing()) return;
+      this.addDraftPoint(e.latlng);
     });
 
     this.ready = true;
-    if (startLat != null && startLng != null) {
-      this.setPin(startLat, startLng, false);
+    if (poly && poly.length >= 3) {
+      this.showFinishedPolygon(poly.map((p) => L.latLng(p.lat, p.lng)), false);
+    } else {
+      this.showLegacyOrEmpty();
     }
-    this.syncCircleRadius(this.radiusMeters() || 150);
 
-    // Drawer animation / overlay: invalidate size after paint.
     queueMicrotask(() => this.map?.invalidateSize());
     setTimeout(() => this.map?.invalidateSize(), 200);
   }
 
   ngOnDestroy(): void {
+    this.clearLayers();
     this.map?.remove();
     this.map = undefined;
-    this.marker = undefined;
-    this.circle = undefined;
   }
 
   protected useMyLocation(): void {
@@ -198,9 +230,7 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         this.locating.set(false);
-        const { latitude, longitude } = pos.coords;
-        this.map?.setView([latitude, longitude], 16);
-        this.setPin(latitude, longitude, true);
+        this.map?.setView([pos.coords.latitude, pos.coords.longitude], 17);
       },
       (err) => {
         this.locating.set(false);
@@ -214,62 +244,153 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     );
   }
 
-  protected clearPin(): void {
-    this.removePinVisual();
+  protected finishDrawing(): void {
+    if (this.draftPoints.length < 3) {
+      this.error.set('يحتاج الرسم إلى 3 نقاط على الأقل');
+      return;
+    }
+    this.error.set(null);
+    this.showFinishedPolygon([...this.draftPoints], true);
+  }
+
+  protected clearAll(): void {
+    this.clearLayers();
+    this.draftPoints = [];
+    this.draftCount.set(0);
+    this.drawing.set(true);
+    this.hasShape.set(false);
     this.cleared.emit();
   }
 
-  private setPin(lat: number, lng: number, emit: boolean): void {
+  private addDraftPoint(latlng: L.LatLng): void {
+    this.draftPoints.push(latlng);
+    this.draftCount.set(this.draftPoints.length);
+    this.error.set(null);
+    this.redrawDraft();
+  }
+
+  private redrawDraft(): void {
     if (!this.map) return;
-    const latlng: L.LatLngExpression = [lat, lng];
-    if (!this.marker) {
-      this.marker = L.marker(latlng, { icon: markerIcon, draggable: true }).addTo(
-        this.map,
-      );
-      this.marker.on('dragend', () => {
-        const p = this.marker!.getLatLng();
-        this.syncCircleCenter(p.lat, p.lng);
-        this.emitPosition(p.lat, p.lng);
+    this.draftLine?.remove();
+    this.clearVertexMarkers();
+    if (this.draftPoints.length === 0) return;
+
+    this.draftLine = L.polyline(this.draftPoints, {
+      ...POLY_STYLE,
+      dashArray: '6 6',
+      fill: false,
+    }).addTo(this.map);
+
+    this.vertexMarkers = this.draftPoints.map((p) =>
+      L.circleMarker(p, {
+        radius: 5,
+        color: '#0d9a6a',
+        fillColor: '#fff',
+        fillOpacity: 1,
+        weight: 2,
+      }).addTo(this.map!),
+    );
+  }
+
+  private showFinishedPolygon(points: L.LatLng[], emit: boolean): void {
+    if (!this.map || points.length < 3) return;
+    this.clearLayers();
+    this.draftPoints = [];
+    this.draftCount.set(0);
+    this.drawing.set(false);
+    this.hasShape.set(true);
+
+    this.polygonLayer = L.polygon(points, POLY_STYLE).addTo(this.map);
+    this.vertexMarkers = points.map((p, index) => {
+      const marker = L.circleMarker(p, {
+        radius: 6,
+        color: '#0d9a6a',
+        fillColor: '#fff',
+        fillOpacity: 1,
+        weight: 2,
+      }).addTo(this.map!);
+
+      // CircleMarker isn't draggable by default — use drag via map events on mousedown
+      marker.on('mousedown', (e: L.LeafletMouseEvent) => {
+        L.DomEvent.stopPropagation(e);
+        const onMove = (ev: L.LeafletMouseEvent) => {
+          marker.setLatLng(ev.latlng);
+          const latlngs = this.vertexMarkers.map((m) => m.getLatLng());
+          this.polygonLayer?.setLatLngs(latlngs);
+        };
+        const onUp = () => {
+          this.map?.off('mousemove', onMove);
+          this.map?.off('mouseup', onUp);
+          this.emitPolygonFromMarkers();
+        };
+        this.map?.on('mousemove', onMove);
+        this.map?.on('mouseup', onUp);
       });
-    } else {
-      this.marker.setLatLng(latlng);
+
+      // keep index referenced for clarity
+      void index;
+      return marker;
+    });
+
+    try {
+      this.map.fitBounds(this.polygonLayer.getBounds().pad(0.2));
+    } catch {
+      /* ignore empty bounds */
     }
-    this.syncCircleCenter(lat, lng);
-    this.hasPin.set(true);
-    if (emit) this.emitPosition(lat, lng);
+
+    if (emit) this.emitPolygonFromMarkers();
   }
 
-  private emitPosition(lat: number, lng: number): void {
-    this.skipNextInputSync = true;
-    this.positionChange.emit({ lat, lng });
-  }
+  private showLegacyOrEmpty(): void {
+    this.clearLayers();
+    this.draftPoints = [];
+    this.draftCount.set(0);
+    this.drawing.set(true);
+    this.hasShape.set(false);
 
-  private removePinVisual(): void {
-    this.marker?.remove();
-    this.circle?.remove();
-    this.marker = undefined;
-    this.circle = undefined;
-    this.hasPin.set(false);
-  }
-
-  private syncCircleCenter(lat: number, lng: number): void {
-    if (!this.map) return;
-    const radius = this.radiusMeters() || 150;
-    if (!this.circle) {
-      this.circle = L.circle([lat, lng], {
+    const lat = this.legacyLat();
+    const lng = this.legacyLng();
+    const radius = this.legacyRadiusMeters();
+    if (lat != null && lng != null && radius != null && radius > 0 && this.map) {
+      // Soft hint for old circle geofences — admin should redraw as a polygon.
+      L.circle([lat, lng], {
         radius,
-        color: '#10b880',
-        fillColor: '#10b880',
-        fillOpacity: 0.18,
+        color: '#94a3b8',
+        dashArray: '4 6',
+        fillOpacity: 0.08,
         weight: 2,
       }).addTo(this.map);
-    } else {
-      this.circle.setLatLng([lat, lng]);
-      this.circle.setRadius(radius);
+      this.map.setView([lat, lng], Math.max(this.map.getZoom(), DEFAULT_ZOOM));
+      this.error.set('هذا الفرع يستخدم نطاقاً دائرياً قديماً — ارسم الشكل الجديد فوق الخريطة');
     }
   }
 
-  private syncCircleRadius(radius: number): void {
-    this.circle?.setRadius(radius);
+  private emitPolygonFromMarkers(): void {
+    const points = this.vertexMarkers.map((m) => {
+      const p = m.getLatLng();
+      return { lat: p.lat, lng: p.lng };
+    });
+    if (points.length < 3) return;
+    this.skipNextInputSync = true;
+    this.polygonChange.emit(points);
+  }
+
+  private clearVertexMarkers(): void {
+    for (const m of this.vertexMarkers) m.remove();
+    this.vertexMarkers = [];
+  }
+
+  private clearLayers(): void {
+    this.draftLine?.remove();
+    this.draftLine = undefined;
+    this.polygonLayer?.remove();
+    this.polygonLayer = undefined;
+    this.clearVertexMarkers();
+    // Remove any leftover legacy circles
+    this.map?.eachLayer((layer) => {
+      if (layer instanceof L.Circle && !(layer instanceof L.CircleMarker)) {
+        this.map?.removeLayer(layer);
+      }
+    });
   }
 }
