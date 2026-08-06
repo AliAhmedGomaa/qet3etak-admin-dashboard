@@ -42,9 +42,36 @@ const locationPinIcon = L.icon({
   template: `
     <div class="picker" dir="rtl">
       <p class="hint">
-        ارسم حدود موقع العمل على الخريطة: اضغط لإضافة نقاط، ثم اضغط «إنهاء الرسم» لإغلاق الشكل.
-        يمكن سحب النقاط بعد الرسم لتعديل الحدود.
+        ابحث بالعنوان للانتقال على الخريطة، أو استخدم موقعك الحالي، ثم ارسم حدود موقع العمل
+        (اضغط لإضافة نقاط ثم «إنهاء الرسم»).
       </p>
+
+      <form class="search" (submit)="$event.preventDefault(); searchAddress()">
+        <input
+          type="search"
+          [value]="addressQuery()"
+          (input)="addressQuery.set($any($event.target).value)"
+          placeholder="اكتب العنوان أو اسم المكان…"
+          aria-label="بحث بالعنوان"
+          autocomplete="street-address"
+        />
+        <button type="submit" class="btn" [disabled]="searching() || !addressQuery().trim()">
+          {{ searching() ? 'جارٍ البحث…' : 'اذهب' }}
+        </button>
+      </form>
+
+      @if (searchResults().length > 1) {
+        <ul class="results" role="listbox">
+          @for (hit of searchResults(); track hit.place_id) {
+            <li>
+              <button type="button" (click)="goToResult(hit)">
+                {{ hit.display_name }}
+              </button>
+            </li>
+          }
+        </ul>
+      }
+
       <div class="actions">
         <button type="button" class="btn" (click)="useMyLocation()" [disabled]="locating()">
           {{ locating() ? 'جارٍ تحديد موقعك…' : 'موقعي الحالي' }}
@@ -89,6 +116,48 @@ const locationPinIcon = L.icon({
       font-size: 0.82rem;
       color: var(--ink-muted, #64748b);
       line-height: 1.45;
+    }
+    .search {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+    }
+    .search input {
+      min-height: 2.4rem;
+      border: 1.5px solid var(--border, #e2e8f0);
+      border-radius: 0.65rem;
+      padding: 0.4rem 0.75rem;
+      font: inherit;
+      background: var(--input-bg, #fff);
+      color: var(--ink, #0f172a);
+    }
+    .results {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 9rem;
+      overflow: auto;
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 0.75rem;
+      background: var(--surface, #fff);
+    }
+    .results li + li {
+      border-top: 1px solid var(--border, #e2e8f0);
+    }
+    .results button {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      text-align: start;
+      padding: 0.65rem 0.8rem;
+      font: inherit;
+      font-size: 0.82rem;
+      line-height: 1.35;
+      color: var(--ink, #0f172a);
+      cursor: pointer;
+    }
+    .results button:hover {
+      background: var(--accent-soft, rgba(16, 184, 128, 0.12));
     }
     .actions {
       display: flex;
@@ -158,6 +227,9 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     viewChild.required<ElementRef<HTMLDivElement>>('mapHost');
 
   protected readonly locating = signal(false);
+  protected readonly searching = signal(false);
+  protected readonly addressQuery = signal('');
+  protected readonly searchResults = signal<NominatimHit[]>([]);
   protected readonly error = signal<string | null>(null);
   protected readonly drawing = signal(true);
   protected readonly draftCount = signal(0);
@@ -247,7 +319,7 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
         this.locating.set(false);
         const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
         this.map?.setView(latlng, 17);
-        this.setLocationPin(latlng);
+        this.setLocationPin(latlng, 'موقعك الحالي');
       },
       (err) => {
         this.locating.set(false);
@@ -261,19 +333,67 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     );
   }
 
-  private setLocationPin(latlng: L.LatLng): void {
+  protected async searchAddress(): Promise<void> {
+    const q = this.addressQuery().trim();
+    if (!q || this.searching()) return;
+    this.searching.set(true);
+    this.error.set(null);
+    this.searchResults.set([]);
+    try {
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.searchParams.set('format', 'json');
+      url.searchParams.set('q', q);
+      url.searchParams.set('limit', '5');
+      url.searchParams.set('addressdetails', '0');
+      const res = await fetch(url.toString(), {
+        headers: {
+          Accept: 'application/json',
+          'Accept-Language': 'ar,en',
+        },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const hits = (await res.json()) as NominatimHit[];
+      if (!hits.length) {
+        this.error.set('لم يتم العثور على هذا العنوان');
+        return;
+      }
+      if (hits.length === 1) {
+        this.goToResult(hits[0]);
+      } else {
+        this.searchResults.set(hits);
+      }
+    } catch {
+      this.error.set('تعذر البحث عن العنوان. حاول مرة أخرى');
+    } finally {
+      this.searching.set(false);
+    }
+  }
+
+  protected goToResult(hit: NominatimHit): void {
+    const lat = Number(hit.lat);
+    const lng = Number(hit.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !this.map) return;
+    const latlng = L.latLng(lat, lng);
+    this.map.setView(latlng, 17);
+    this.setLocationPin(latlng, hit.display_name);
+    this.searchResults.set([]);
+    this.error.set(null);
+  }
+
+  private setLocationPin(latlng: L.LatLng, label: string): void {
     if (!this.map) return;
     if (!this.locationPin) {
       this.locationPin = L.marker(latlng, {
         icon: locationPinIcon,
         zIndexOffset: 1000,
-        title: 'موقعك الحالي',
+        title: label,
       }).addTo(this.map);
-      this.locationPin.bindPopup('موقعك الحالي').openPopup();
     } else {
       this.locationPin.setLatLng(latlng);
-      this.locationPin.openPopup();
+      this.locationPin.setTooltipContent?.(label);
     }
+    this.locationPin.unbindPopup();
+    this.locationPin.bindPopup(label).openPopup();
   }
 
   protected finishDrawing(): void {
@@ -425,4 +545,11 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
       }
     });
   }
+}
+
+interface NominatimHit {
+  place_id: number;
+  lat: string;
+  lon: string;
+  display_name: string;
 }
