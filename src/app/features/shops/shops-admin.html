@@ -204,6 +204,14 @@
             العنوان
             <input formControlName="address" />
           </label>
+          <div class="map-field">
+            <span class="map-label">موقع المتجر على الخريطة</span>
+            <app-location-map-picker
+              [lat]="editorLocation()?.lat ?? null"
+              [lng]="editorLocation()?.lng ?? null"
+              (locationChange)="onEditorLocationChange($event)"
+            />
+          </div>
           <div class="grid">
             <label>
               كلمة المرور

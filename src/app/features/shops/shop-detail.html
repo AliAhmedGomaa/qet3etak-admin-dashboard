@@ -18,6 +18,23 @@
           {{ s.fullName }} · <span dir="ltr">{{ s.phone }}</span> · {{ s.city }}
         </p>
         <p class="addr">{{ s.address }}</p>
+        @if (s.locationLat != null && s.locationLng != null) {
+          <p class="addr">
+            <a
+              class="maps-link"
+              [href]="
+                'https://www.google.com/maps/dir/?api=1&destination=' +
+                s.locationLat +
+                ',' +
+                s.locationLng
+              "
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              فتح موقع المتجر في الخرائط
+            </a>
+          </p>
+        }
         <p class="addr">
           تاريخ التسجيل:
           {{ s.createdAt ? (s.createdAt | date: 'mediumDate') : '—' }}

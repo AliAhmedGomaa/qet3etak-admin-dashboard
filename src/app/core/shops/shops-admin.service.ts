@@ -11,6 +11,8 @@ export type ShopInput = {
   phone: string;
   city: string;
   address: string;
+  locationLat?: number;
+  locationLng?: number;
   password?: string;
   commercialRegPhotoUrl?: string;
   status?: UserStatus;

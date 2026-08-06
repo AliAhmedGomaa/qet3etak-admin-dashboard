@@ -20,6 +20,10 @@ import { BranchesAdminService } from '../../core/branches/branches-admin.service
 import { BranchOption } from '../../core/branches/branch.models';
 import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
 import { AdminPager } from '../../shared/admin-pager/admin-pager';
+import {
+  LocationMapPicker,
+  ShopLocation,
+} from '../../shared/location-map-picker/location-map-picker';
 
 const STATUS_LABELS: Record<UserStatus, string> = {
   PENDING_VERIFICATION: 'قيد المراجعة',
@@ -30,7 +34,14 @@ const STATUS_LABELS: Record<UserStatus, string> = {
 
 @Component({
   selector: 'app-shops-admin',
-  imports: [ReactiveFormsModule, DatePipe, ConfirmDialog, AdminPager, RouterLink],
+  imports: [
+    ReactiveFormsModule,
+    DatePipe,
+    ConfirmDialog,
+    AdminPager,
+    RouterLink,
+    LocationMapPicker,
+  ],
   templateUrl: './shops-admin.html',
   styleUrl: './shops-admin.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -52,6 +63,7 @@ export class ShopsAdmin implements OnInit {
   protected readonly saving = signal(false);
   protected readonly editorOpen = signal(false);
   protected readonly editingId = signal<string | null>(null);
+  protected readonly editorLocation = signal<ShopLocation | null>(null);
   protected readonly page = signal(1);
   protected readonly totalPages = signal(1);
   protected readonly total = signal(0);
@@ -174,6 +186,7 @@ export class ShopsAdmin implements OnInit {
 
   protected openCreate(): void {
     this.editingId.set(null);
+    this.editorLocation.set(null);
     this.form.reset({
       fullName: '',
       shopName: '',
@@ -197,6 +210,11 @@ export class ShopsAdmin implements OnInit {
 
   protected openEdit(shop: ShopUser): void {
     this.editingId.set(shop.id);
+    this.editorLocation.set(
+      shop.locationLat != null && shop.locationLng != null
+        ? { lat: shop.locationLat, lng: shop.locationLng }
+        : null,
+    );
     this.form.reset({
       fullName: shop.fullName,
       shopName: shop.shopName,
@@ -214,6 +232,10 @@ export class ShopsAdmin implements OnInit {
     this.form.controls.password.setValidators([Validators.minLength(6)]);
     this.form.controls.password.updateValueAndValidity();
     this.editorOpen.set(true);
+  }
+
+  protected onEditorLocationChange(loc: ShopLocation | null): void {
+    this.editorLocation.set(loc);
   }
 
   protected closeEditor(): void {
@@ -247,6 +269,7 @@ export class ShopsAdmin implements OnInit {
     this.saving.set(true);
     this.error.set(null);
 
+    const loc = this.editorLocation();
     const payload = {
       fullName: value.fullName.trim(),
       shopName: value.shopName.trim(),
@@ -261,6 +284,9 @@ export class ShopsAdmin implements OnInit {
           : undefined,
       branchId: value.branchId.trim() || null,
       shopDiscountPercent: Number(value.shopDiscountPercent) || 0,
+      ...(loc
+        ? { locationLat: loc.lat, locationLng: loc.lng }
+        : {}),
       ...(value.password.trim()
         ? { password: value.password.trim() }
         : {}),

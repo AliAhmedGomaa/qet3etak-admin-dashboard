@@ -53,6 +53,16 @@
   font-size: 0.85rem;
 }
 
+.maps-link {
+  color: #1a73e8;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.maps-link:hover {
+  text-decoration: underline;
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

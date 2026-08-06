@@ -320,6 +320,17 @@ td small {
   resize: vertical;
 }
 
+.map-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.map-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

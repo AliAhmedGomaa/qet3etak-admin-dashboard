@@ -19,6 +19,8 @@ export interface ShopUser {
   phone: string;
   city: string;
   address: string;
+  locationLat?: number;
+  locationLng?: number;
   commercialRegPhotoUrl: string;
   status: UserStatus;
   role: UserRole;
