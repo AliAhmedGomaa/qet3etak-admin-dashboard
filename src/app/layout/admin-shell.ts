@@ -127,24 +127,6 @@ const BRANCH_MANAGER_PATHS = new Set([
             @if (pwa.canNativeInstall()) {
               <button type="button" class="bell install" (click)="installApp()">تثبيت التطبيق</button>
             }
-            @if (push.supported()) {
-              <button
-                type="button"
-                class="bell"
-                [class.on]="push.enabled()"
-                [disabled]="push.busy()"
-                (click)="push.toggle()"
-                [title]="push.enabled() ? 'إيقاف إشعارات المحادثات' : 'تفعيل إشعارات المحادثات'"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                  <path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <span class="bell__label">{{ push.enabled() ? 'الإشعارات مفعّلة' : 'تفعيل الإشعارات' }}</span>
-              </button>
-            }
-            @if (push.lastError(); as pushErr) {
-              <span class="push-err" [title]="pushErr">{{ pushErr }}</span>
-            }
           </div>
         </header>
         <div class="content app-shell-content">
@@ -626,6 +608,7 @@ export class AdminShell implements OnInit {
     this.returns.startWatching();
     this.hr.startWatchingVacations();
     this.push.listenForPush();
+    void this.push.ensureEnabled();
 
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
