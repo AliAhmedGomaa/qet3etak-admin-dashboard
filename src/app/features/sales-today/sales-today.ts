@@ -9,8 +9,10 @@ import {
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/auth/auth.service';
+import { ShopUser } from '../../core/auth/auth.models';
 import { Product } from '../../core/products/product.models';
 import { ProductsAdminService } from '../../core/products/products-admin.service';
+import { ShopsAdminService } from '../../core/shops/shops-admin.service';
 import {
   AdminSalesService,
   SoldTodayLine,
@@ -28,6 +30,8 @@ type CartLine = {
   unitPrice: number;
 };
 
+type CustomerMode = 'walkin' | 'shop';
+
 @Component({
   selector: 'app-sales-today',
   imports: [CurrencyPipe, DatePipe, FormsModule],
@@ -38,6 +42,7 @@ type CartLine = {
 export class SalesTodayPage implements OnInit {
   private readonly salesApi = inject(AdminSalesService);
   private readonly productsApi = inject(ProductsAdminService);
+  private readonly shopsApi = inject(ShopsAdminService);
   private readonly auth = inject(AuthService);
 
   protected readonly loading = signal(false);
@@ -47,14 +52,21 @@ export class SalesTodayPage implements OnInit {
   protected readonly data = signal<SoldTodayResponse | null>(null);
 
   protected readonly sellOpen = signal(false);
+  protected readonly customerMode = signal<CustomerMode>('walkin');
   protected readonly productQuery = signal('');
   protected readonly productHits = signal<Product[]>([]);
   protected readonly searching = signal(false);
+  protected readonly shopQuery = signal('');
+  protected readonly shopHits = signal<ShopUser[]>([]);
+  protected readonly searchingShops = signal(false);
+  protected readonly selectedShop = signal<ShopUser | null>(null);
   protected readonly cart = signal<CartLine[]>([]);
   protected customerName = '';
   protected customerPhone = '';
   protected notes = '';
+  protected paymentMethod: 'CASH' | 'CREDIT' = 'CASH';
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
+  private shopSearchTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly canSell = computed(() => this.auth.can('orders.create'));
 
@@ -96,9 +108,14 @@ export class SalesTodayPage implements OnInit {
     this.cart.set([]);
     this.productHits.set([]);
     this.productQuery.set('');
+    this.shopHits.set([]);
+    this.shopQuery.set('');
+    this.selectedShop.set(null);
+    this.customerMode.set('walkin');
     this.customerName = '';
     this.customerPhone = '';
     this.notes = '';
+    this.paymentMethod = 'CASH';
     this.success.set(null);
     this.error.set(null);
     this.sellOpen.set(true);
@@ -107,6 +124,58 @@ export class SalesTodayPage implements OnInit {
   protected closeSell(): void {
     if (this.saving()) return;
     this.sellOpen.set(false);
+  }
+
+  protected setCustomerMode(mode: CustomerMode): void {
+    this.customerMode.set(mode);
+    this.error.set(null);
+    if (mode === 'walkin') {
+      this.selectedShop.set(null);
+      this.shopHits.set([]);
+      this.shopQuery.set('');
+      this.paymentMethod = 'CASH';
+    } else {
+      this.customerName = '';
+      this.customerPhone = '';
+    }
+  }
+
+  protected onShopSearch(value: string): void {
+    this.shopQuery.set(value);
+    if (this.shopSearchTimer) clearTimeout(this.shopSearchTimer);
+    const q = value.trim();
+    if (q.length < 2) {
+      this.shopHits.set([]);
+      this.searchingShops.set(false);
+      return;
+    }
+    this.shopSearchTimer = setTimeout(() => {
+      this.searchingShops.set(true);
+      this.shopsApi.list({ q, status: 'APPROVED', limit: 12, page: 1 }).subscribe({
+        next: (res) => {
+          this.shopHits.set(
+            res.items.filter((s) => s.phone !== '00000000000'),
+          );
+          this.searchingShops.set(false);
+        },
+        error: () => {
+          this.searchingShops.set(false);
+          this.shopHits.set([]);
+        },
+      });
+    }, 280);
+  }
+
+  protected selectShop(shop: ShopUser): void {
+    this.selectedShop.set(shop);
+    this.shopQuery.set(shop.shopName);
+    this.shopHits.set([]);
+  }
+
+  protected clearSelectedShop(): void {
+    this.selectedShop.set(null);
+    this.shopQuery.set('');
+    this.shopHits.set([]);
   }
 
   protected onProductSearch(value: string): void {
@@ -135,6 +204,11 @@ export class SalesTodayPage implements OnInit {
 
   protected addProduct(p: Product): void {
     if (p.stockQuantity < 1) return;
+    const discount = Number(this.selectedShop()?.shopDiscountPercent ?? 0);
+    const defaultPrice =
+      discount > 0
+        ? Number((p.basePrice * (1 - discount / 100)).toFixed(2))
+        : p.basePrice;
     const existing = this.cart().find((c) => c.productId === p.id);
     if (existing) {
       this.cart.update((rows) =>
@@ -157,7 +231,7 @@ export class SalesTodayPage implements OnInit {
           stockQuantity: p.stockQuantity,
           basePrice: p.basePrice,
           quantity: 1,
-          unitPrice: p.basePrice,
+          unitPrice: defaultPrice,
         },
       ]);
     }
@@ -196,23 +270,43 @@ export class SalesTodayPage implements OnInit {
       unitPrice: c.unitPrice,
     }));
     if (!items.length) {
-      this.error.set('أضف قطعة واحدة واحدةلاً للبيع');
+      this.error.set('أضف قطعة واحدةلاً للبيع');
       return;
     }
+    const mode = this.customerMode();
+    const shop = this.selectedShop();
+    if (mode === 'shop' && !shop) {
+      this.error.set('اختر متجراً مسجّلاً');
+      return;
+    }
+
     this.saving.set(true);
     this.error.set(null);
     this.salesApi
       .walkIn({
         items,
-        customerName: this.customerName.trim() || undefined,
-        customerPhone: this.customerPhone.trim() || undefined,
+        shopId: mode === 'shop' ? shop!.id : undefined,
+        paymentMethod:
+          mode === 'shop' ? this.paymentMethod : 'CASH',
+        customerName:
+          mode === 'walkin'
+            ? this.customerName.trim() || undefined
+            : undefined,
+        customerPhone:
+          mode === 'walkin'
+            ? this.customerPhone.trim() || undefined
+            : undefined,
         notes: this.notes.trim() || undefined,
       })
       .subscribe({
         next: () => {
           this.saving.set(false);
           this.sellOpen.set(false);
-          this.success.set('تم تسجيل البيع المباشر بنجاح');
+          this.success.set(
+            mode === 'shop'
+              ? `تم تسجيل البيع للمتجر ${shop!.shopName}`
+              : 'تم تسجيل البيع المباشر بنجاح',
+          );
           this.reload();
         },
         error: (err: { error?: { message?: string | string[] } }) => {

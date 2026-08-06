@@ -19,7 +19,7 @@
     }
   </header>
 
-  @if (error()) {
+  @if (error() && !sellOpen()) {
     <p class="err">{{ error() }}</p>
   }
   @if (success()) {
@@ -106,6 +106,91 @@
         <button type="button" class="btn btn-ghost" (click)="closeSell()">إغلاق</button>
       </header>
 
+      <div class="mode" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          [class.is-on]="customerMode() === 'walkin'"
+          (click)="setCustomerMode('walkin')"
+        >
+          عميل عابر
+        </button>
+        <button
+          type="button"
+          role="tab"
+          [class.is-on]="customerMode() === 'shop'"
+          (click)="setCustomerMode('shop')"
+        >
+          متجر مسجّل
+        </button>
+      </div>
+
+      @if (customerMode() === 'shop') {
+        <label class="field">
+          بحث عن متجر
+          <input
+            type="search"
+            [ngModel]="shopQuery()"
+            (ngModelChange)="onShopSearch($event)"
+            placeholder="اسم المتجر أو الجوال…"
+            autocomplete="off"
+          />
+        </label>
+        @if (searchingShops()) {
+          <p class="muted">جارٍ البحث…</p>
+        }
+        @if (shopHits().length) {
+          <ul class="hits">
+            @for (s of shopHits(); track s.id) {
+              <li>
+                <button type="button" (click)="selectShop(s)">
+                  <span>
+                    <strong>{{ s.shopName }}</strong>
+                    <small>
+                      {{ s.fullName }} ·
+                      <span dir="ltr">{{ s.phone }}</span>
+                      @if (s.city) {
+                        · {{ s.city }}
+                      }
+                    </small>
+                  </span>
+                  <em>اختيار</em>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+        @if (selectedShop(); as shop) {
+          <div class="picked">
+            <div>
+              <strong>{{ shop.shopName }}</strong>
+              <small>
+                {{ shop.fullName }} ·
+                <span dir="ltr">{{ shop.phone }}</span>
+                @if (shop.shopDiscountPercent) {
+                  · خصم {{ shop.shopDiscountPercent }}%
+                }
+              </small>
+            </div>
+            <button type="button" class="btn btn-ghost" (click)="clearSelectedShop()">
+              تغيير
+            </button>
+          </div>
+
+          <fieldset class="pay">
+            <legend>طريقة الدفع</legend>
+            <label>
+              <input type="radio" name="pay" [(ngModel)]="paymentMethod" value="CASH" />
+              نقدي
+            </label>
+            <label>
+              <input type="radio" name="pay" [(ngModel)]="paymentMethod" value="CREDIT" />
+              آجل / رصيد المتجر
+            </label>
+          </fieldset>
+        }
+      }
+
       <label class="field">
         بحث عن قطعة
         <input
@@ -182,16 +267,19 @@
         <p class="muted">أضف قطعة واحدةً من البحث أعلاه.</p>
       }
 
-      <div class="grid">
-        <label class="field">
-          اسم العميل (اختياري)
-          <input type="text" [(ngModel)]="customerName" />
-        </label>
-        <label class="field">
-          جوال العميل (اختياري)
-          <input type="tel" [(ngModel)]="customerPhone" />
-        </label>
-      </div>
+      @if (customerMode() === 'walkin') {
+        <div class="grid">
+          <label class="field">
+            اسم العميل (اختياري)
+            <input type="text" [(ngModel)]="customerName" />
+          </label>
+          <label class="field">
+            جوال العميل (اختياري)
+            <input type="tel" [(ngModel)]="customerPhone" />
+          </label>
+        </div>
+      }
+
       <label class="field">
         ملاحظة
         <input type="text" [(ngModel)]="notes" placeholder="اختياري" />
@@ -209,9 +297,19 @@
           type="button"
           class="btn btn-primary"
           (click)="submitSale()"
-          [disabled]="saving() || !cart().length"
+          [disabled]="
+            saving() ||
+            !cart().length ||
+            (customerMode() === 'shop' && !selectedShop())
+          "
         >
-          {{ saving() ? 'جارٍ الحفظ…' : 'تأكيد البيع النقدي' }}
+          {{
+            saving()
+              ? 'جارٍ الحفظ…'
+              : customerMode() === 'shop' && paymentMethod === 'CREDIT'
+                ? 'تأكيد البيع الآجل'
+                : 'تأكيد البيع النقدي'
+          }}
         </button>
       </footer>
     </div>

@@ -35,6 +35,8 @@ export type WalkInSaleItem = {
 
 export type WalkInSaleInput = {
   items: WalkInSaleItem[];
+  shopId?: string;
+  paymentMethod?: 'CASH' | 'CREDIT';
   customerName?: string;
   customerPhone?: string;
   notes?: string;

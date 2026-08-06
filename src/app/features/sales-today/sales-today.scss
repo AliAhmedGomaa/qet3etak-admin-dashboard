@@ -192,6 +192,77 @@ td small {
   font-size: 1.1rem;
 }
 
+.mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  padding: 0.3rem;
+  background: #f1f5f9;
+  border-radius: 0.85rem;
+}
+
+.mode button {
+  border: 0;
+  border-radius: 0.65rem;
+  min-height: 2.35rem;
+  background: transparent;
+  color: #64748b;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mode button.is-on {
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.picked {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  border-radius: 0.85rem;
+}
+
+.picked strong {
+  display: block;
+}
+
+.picked small {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.pay {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.25rem;
+}
+
+.pay legend {
+  padding: 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.pay label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .field {
   display: grid;
   gap: 0.35rem;
