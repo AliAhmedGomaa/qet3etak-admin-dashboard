@@ -163,23 +163,23 @@
 
         <fieldset class="geofence">
           <legend>نطاق موقع العمل (للمندوبين)</legend>
-          <p class="muted geo-hint">
-            يجب ضبط الإحداثيات ونصف القطر حتى يتمكن المندوب من تسجيل الدخول داخل الموقع فقط.
-          </p>
-          <div class="grid">
-            <label>
-              خط العرض (Latitude)
-              <input type="number" step="any" formControlName="geofenceLat" dir="ltr" placeholder="30.0444" />
-            </label>
-            <label>
-              خط الطول (Longitude)
-              <input type="number" step="any" formControlName="geofenceLng" dir="ltr" placeholder="31.2357" />
-            </label>
-            <label>
-              نصف القطر (متر)
-              <input type="number" min="10" step="1" formControlName="geofenceRadiusMeters" dir="ltr" />
-            </label>
-          </div>
+          <app-geofence-map-picker
+            [lat]="form.controls.geofenceLat.value"
+            [lng]="form.controls.geofenceLng.value"
+            [radiusMeters]="form.controls.geofenceRadiusMeters.value || 150"
+            (positionChange)="onMapPosition($event)"
+            (cleared)="onMapCleared()"
+          />
+          <label class="radius">
+            نصف قطر النطاق (متر)
+            <input
+              type="number"
+              min="10"
+              step="10"
+              formControlName="geofenceRadiusMeters"
+              dir="ltr"
+            />
+          </label>
         </fieldset>
 
         <footer>

@@ -18,10 +18,11 @@ import { BranchesAdminService } from '../../core/branches/branches-admin.service
 import { AdminUsersService } from '../../core/users/admin-users.service';
 import { AdminUser } from '../../core/users/user.models';
 import { AdminPager } from '../../shared/admin-pager/admin-pager';
+import { GeofenceMapPicker } from '../../shared/geofence-map-picker/geofence-map-picker';
 
 @Component({
   selector: 'app-branches-admin',
-  imports: [ReactiveFormsModule, AdminPager],
+  imports: [ReactiveFormsModule, AdminPager, GeofenceMapPicker],
   templateUrl: './branches-admin.html',
   styleUrl: './branches-admin.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -183,6 +184,20 @@ export class BranchesAdmin implements OnInit {
   protected closeEditor(): void {
     this.editorOpen.set(false);
     this.editingId.set(null);
+  }
+
+  protected onMapPosition(pos: { lat: number; lng: number }): void {
+    this.form.patchValue({
+      geofenceLat: pos.lat,
+      geofenceLng: pos.lng,
+    });
+  }
+
+  protected onMapCleared(): void {
+    this.form.patchValue({
+      geofenceLat: null,
+      geofenceLng: null,
+    });
   }
 
   protected save(): void {
