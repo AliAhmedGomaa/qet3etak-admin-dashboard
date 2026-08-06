@@ -146,13 +146,13 @@
                 <option value="INACTIVE">متوقف</option>
               </select>
             </label>
-            <label>
-              نموذج حساب الأجر
+            <label class="fee-model-field">
+              طريقة احتساب الراتب
               <select
                 formControlName="feeModel"
                 (change)="onFeeModelChange($any($event.target).value)"
               >
-                @for (m of feeModels; track m.value) {
+                @for (m of feeModelOptions(); track m.value) {
                   <option [value]="m.value">{{ m.label }}</option>
                 }
               </select>
@@ -163,7 +163,7 @@
 
           @if (selectedFeeModel() === 'FLAT') {
             <label>
-              الأجر الثابت لكل توصيلة (ج.م)
+              الأجر لكل توصيلة (ج.م)
               <input type="number" min="0" step="1" formControlName="flatFee" />
             </label>
           }
@@ -187,10 +187,10 @@
           }
           @if (selectedFeeModel() === 'HOURLY') {
             <label>
-              سعر الساعة للمندوب (ج.م / ساعة عمل)
+              سعر الساعة (ج.م)
               <input type="number" min="1" step="1" formControlName="hourlyRate" />
               <small class="notes">
-                يُحسب من وقت تسجيل الحضور حتى الانصراف في موقع العمل — وليس عن كل طلب توصيل.
+                من تسجيل الحضور حتى الانصراف في موقع العمل — وليس عن كل طلب.
               </small>
             </label>
           }

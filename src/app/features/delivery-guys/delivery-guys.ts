@@ -21,19 +21,22 @@ import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
 import { AdminPager } from '../../shared/admin-pager/admin-pager';
 
 const FEE_LABELS: Record<DeliveryFeeModel, string> = {
-  FLAT: 'مبلغ ثابت لكل توصيلة',
+  FLAT: 'حسب الطلب (لكل توصيلة)',
   PERCENT: 'نسبة من قيمة الطلب',
   BASE_PLUS_ITEMS: 'أساسي + لكل قطعة',
-  HOURLY: 'أجر بالساعة (وقت العمل)',
+  HOURLY: 'حسب الساعة (وقت العمل)',
 };
 
 const FEE_HINTS: Record<DeliveryFeeModel, string> = {
-  FLAT: 'يُحسب مبلغ ثابت عن كل طلب يتم توصيله.',
+  FLAT: 'حدد مبلغ الأجر عن كل طلب يوصّله المندوب.',
   PERCENT: 'نسبة مئوية من إجمالي قيمة الطلب.',
   BASE_PLUS_ITEMS: 'أجر أساسي للطلب + مبلغ إضافي عن كل قطعة.',
   HOURLY:
-    'أجر حسب ساعات الحضور من تسجيل الدخول حتى الانصراف — ليس عن كل توصيلة.',
+    'حدد سعر الساعة. يُحسب الأجر من تسجيل الحضور حتى الانصراف — وليس عن كل توصيلة.',
 };
+
+/** Primary salary modes shown in the editor dropdown. */
+const PRIMARY_FEE_MODELS: DeliveryFeeModel[] = ['FLAT', 'HOURLY'];
 
 @Component({
   selector: 'app-delivery-guys',
@@ -65,12 +68,15 @@ export class DeliveryGuysPage implements OnInit {
   protected readonly selectedFeeModel = signal<DeliveryFeeModel>('FLAT');
 
   protected readonly feeModels: Array<{ value: DeliveryFeeModel; label: string }> =
-    [
-      { value: 'FLAT', label: FEE_LABELS.FLAT },
-      { value: 'PERCENT', label: FEE_LABELS.PERCENT },
-      { value: 'BASE_PLUS_ITEMS', label: FEE_LABELS.BASE_PLUS_ITEMS },
-      { value: 'HOURLY', label: FEE_LABELS.HOURLY },
-    ];
+    PRIMARY_FEE_MODELS.map((value) => ({
+      value,
+      label: FEE_LABELS[value],
+    }));
+
+  /** Dropdown options — includes legacy models only when editing that courier. */
+  protected readonly feeModelOptions = signal<
+    Array<{ value: DeliveryFeeModel; label: string }>
+  >(this.feeModels);
 
   protected feeHint(model: DeliveryFeeModel): string {
     return FEE_HINTS[model];
@@ -171,6 +177,7 @@ export class DeliveryGuysPage implements OnInit {
     this.feePreview.set(null);
     this.editorError.set(null);
     this.selectedFeeModel.set('FLAT');
+    this.feeModelOptions.set(this.feeModels);
     this.form.reset({
       fullName: '',
       phone: '',
@@ -200,6 +207,11 @@ export class DeliveryGuysPage implements OnInit {
     this.editorError.set(null);
     const model = guy.feeModel || 'FLAT';
     this.selectedFeeModel.set(model);
+    const options = [...this.feeModels];
+    if (!PRIMARY_FEE_MODELS.includes(model)) {
+      options.push({ value: model, label: FEE_LABELS[model] });
+    }
+    this.feeModelOptions.set(options);
     this.form.patchValue({
       fullName: guy.fullName,
       phone: guy.phone,

@@ -273,6 +273,14 @@ td small {
   line-height: 1.45;
 }
 
+.fee-model-field {
+  grid-column: 1 / -1;
+}
+
+.fee-model-field select {
+  font-weight: 700;
+}
+
 .modal__card .notes {
   display: block;
   margin-top: 0.35rem;
