@@ -10,6 +10,10 @@ import {
   templateUrl: './confirm-dialog.html',
   styleUrl: './confirm-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[style.display]': 'open() ? "contents" : "none"',
+    '[attr.aria-hidden]': 'open() ? null : "true"',
+  },
 })
 export class ConfirmDialog {
   readonly open = input(false);
