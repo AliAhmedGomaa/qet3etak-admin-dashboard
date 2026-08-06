@@ -80,6 +80,11 @@ const locationPinIcon = L.icon({
         @if (drawing() && draftCount() >= 3) {
           <button type="button" class="btn" (click)="finishDrawing()">إنهاء الرسم</button>
         }
+        @if (selectedVertex() !== null) {
+          <button type="button" class="btn danger" (click)="deleteSelectedVertex()">
+            حذف النقطة
+          </button>
+        }
         <button
           type="button"
           class="btn ghost"
@@ -97,9 +102,14 @@ const locationPinIcon = L.icon({
           } @else {
             — جاهز للإنهاء
           }
+          @if (selectedVertex() !== null) {
+            — اضغط «حذف النقطة» لإزالة النقطة المحددة
+          }
         </p>
       } @else if (hasShape()) {
-        <p class="status ok">تم رسم نطاق العمل · يمكنك سحب النقاط للتعديل</p>
+        <p class="status ok">
+          تم رسم نطاق العمل · اسحب النقاط للتعديل أو اختر نقطة ثم احذفها
+        </p>
       }
       <div #mapHost class="map" role="application" aria-label="رسم نطاق موقع الفرع"></div>
       @if (error()) {
@@ -192,6 +202,9 @@ const locationPinIcon = L.icon({
       color: var(--ink, #0f172a);
       border: 1.5px solid var(--border, #e2e8f0);
     }
+    .btn.danger {
+      background: #dc2626;
+    }
     .status {
       margin: 0;
       font-size: 0.8rem;
@@ -242,6 +255,8 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
   protected readonly drawing = signal(true);
   protected readonly draftCount = signal(0);
   protected readonly hasShape = signal(false);
+  /** Index of the vertex currently selected for deletion. */
+  protected readonly selectedVertex = signal<number | null>(null);
 
   private map?: L.Map;
   private draftLine?: L.Polyline;
@@ -295,9 +310,17 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     }).addTo(this.map);
 
     this.map.on('click', (e: L.LeafletMouseEvent) => {
-      if (!this.drawing()) return;
+      if (!this.drawing()) {
+        this.selectedVertex.set(null);
+        this.refreshVertexStyles();
+        return;
+      }
+      this.selectedVertex.set(null);
       this.addDraftPoint(e.latlng);
     });
+
+    // Delete / Backspace removes the selected vertex.
+    window.addEventListener('keydown', this.onKeyDown);
 
     this.ready = true;
     if (poly && poly.length >= 3) {
@@ -311,6 +334,7 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    window.removeEventListener('keydown', this.onKeyDown);
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchAbort?.abort();
     this.locationPin?.remove();
@@ -319,6 +343,17 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     this.map?.remove();
     this.map = undefined;
   }
+
+  private readonly onKeyDown = (e: KeyboardEvent): void => {
+    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+    const t = e.target as HTMLElement | null;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {
+      return;
+    }
+    if (this.selectedVertex() === null) return;
+    e.preventDefault();
+    this.deleteSelectedVertex();
+  };
 
   protected useMyLocation(): void {
     if (!navigator.geolocation) {
@@ -444,14 +479,57 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     this.clearLayers();
     this.draftPoints = [];
     this.draftCount.set(0);
+    this.selectedVertex.set(null);
     this.drawing.set(true);
     this.hasShape.set(false);
     this.cleared.emit();
   }
 
+  protected deleteSelectedVertex(): void {
+    const idx = this.selectedVertex();
+    if (idx === null) return;
+
+    if (this.drawing()) {
+      if (idx < 0 || idx >= this.draftPoints.length) {
+        this.selectedVertex.set(null);
+        return;
+      }
+      this.draftPoints.splice(idx, 1);
+      this.draftCount.set(this.draftPoints.length);
+      this.selectedVertex.set(null);
+      this.redrawDraft();
+      return;
+    }
+
+    // Finished polygon: remove vertex; if < 3 left, return to drawing mode.
+    if (idx < 0 || idx >= this.vertexMarkers.length) {
+      this.selectedVertex.set(null);
+      return;
+    }
+    const remaining = this.vertexMarkers
+      .map((m) => m.getLatLng())
+      .filter((_, i) => i !== idx);
+
+    if (remaining.length < 3) {
+      this.clearLayers();
+      this.draftPoints = remaining;
+      this.draftCount.set(remaining.length);
+      this.selectedVertex.set(null);
+      this.drawing.set(true);
+      this.hasShape.set(false);
+      this.cleared.emit();
+      this.redrawDraft();
+      return;
+    }
+
+    this.selectedVertex.set(null);
+    this.showFinishedPolygon(remaining, true);
+  }
+
   private addDraftPoint(latlng: L.LatLng): void {
     this.draftPoints.push(latlng);
     this.draftCount.set(this.draftPoints.length);
+    this.selectedVertex.set(null);
     this.error.set(null);
     this.redrawDraft();
   }
@@ -468,15 +546,34 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
       fill: false,
     }).addTo(this.map);
 
-    this.vertexMarkers = this.draftPoints.map((p) =>
-      L.circleMarker(p, {
-        radius: 5,
-        color: '#0d9a6a',
-        fillColor: '#fff',
-        fillOpacity: 1,
-        weight: 2,
-      }).addTo(this.map!),
-    );
+    this.vertexMarkers = this.draftPoints.map((p, index) => {
+      const marker = L.circleMarker(p, this.vertexStyle(index)).addTo(this.map!);
+      marker.on('click', (e: L.LeafletMouseEvent) => {
+        L.DomEvent.stopPropagation(e);
+        this.selectVertex(index);
+      });
+      return marker;
+    });
+  }
+
+  private selectVertex(index: number): void {
+    this.selectedVertex.set(this.selectedVertex() === index ? null : index);
+    this.refreshVertexStyles();
+  }
+
+  private vertexStyle(index: number): L.CircleMarkerOptions {
+    const selected = this.selectedVertex() === index;
+    return {
+      radius: selected ? 9 : 6,
+      color: selected ? '#dc2626' : '#0d9a6a',
+      fillColor: selected ? '#fecaca' : '#fff',
+      fillOpacity: 1,
+      weight: selected ? 3 : 2,
+    };
+  }
+
+  private refreshVertexStyles(): void {
+    this.vertexMarkers.forEach((m, i) => m.setStyle(this.vertexStyle(i)));
   }
 
   private showFinishedPolygon(points: L.LatLng[], emit: boolean): void {
@@ -484,18 +581,18 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     this.clearLayers();
     this.draftPoints = [];
     this.draftCount.set(0);
+    this.selectedVertex.set(null);
     this.drawing.set(false);
     this.hasShape.set(true);
 
     this.polygonLayer = L.polygon(points, POLY_STYLE).addTo(this.map);
     this.vertexMarkers = points.map((p, index) => {
-      const marker = L.circleMarker(p, {
-        radius: 6,
-        color: '#0d9a6a',
-        fillColor: '#fff',
-        fillOpacity: 1,
-        weight: 2,
-      }).addTo(this.map!);
+      const marker = L.circleMarker(p, this.vertexStyle(index)).addTo(this.map!);
+
+      marker.on('click', (e: L.LeafletMouseEvent) => {
+        L.DomEvent.stopPropagation(e);
+        this.selectVertex(index);
+      });
 
       // CircleMarker isn't draggable by default — use drag via map events on mousedown
       marker.on('mousedown', (e: L.LeafletMouseEvent) => {
@@ -514,8 +611,6 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
         this.map?.on('mouseup', onUp);
       });
 
-      // keep index referenced for clarity
-      void index;
       return marker;
     });
 
@@ -532,6 +627,7 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     this.clearLayers();
     this.draftPoints = [];
     this.draftCount.set(0);
+    this.selectedVertex.set(null);
     this.drawing.set(true);
     this.hasShape.set(false);
 
