@@ -18,16 +18,18 @@ import {
 } from '../../core/delivery/delivery-guys-admin.service';
 import { orderStatusAr, paymentMethodAr } from '../../core/i18n/ar-labels';
 import { AdminPager } from '../../shared/admin-pager/admin-pager';
+import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
 
 const COLUMNS: Array<{ status: OrderStatus; title: string }> = [
   { status: 'RECEIVED', title: orderStatusAr['RECEIVED'] },
   { status: 'SHIPPED', title: orderStatusAr['SHIPPED'] },
   { status: 'DELIVERED', title: orderStatusAr['DELIVERED'] },
+  { status: 'RETURNED', title: orderStatusAr['RETURNED'] },
 ];
 
 @Component({
   selector: 'app-orders-board',
-  imports: [CurrencyPipe, DatePipe, FormsModule, AdminPager],
+  imports: [CurrencyPipe, DatePipe, FormsModule, AdminPager, ConfirmDialog],
   templateUrl: './orders-board.html',
   styleUrl: './orders-board.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,6 +55,9 @@ export class OrdersBoard implements OnInit {
   protected readonly pendingStatus = signal<OrderStatus | null>(null);
   protected assignGuyId = '';
   protected readonly assigning = signal(false);
+
+  protected readonly returnTarget = signal<AdminOrder | null>(null);
+  protected readonly returning = signal(false);
 
   ngOnInit(): void {
     this.load();
@@ -135,6 +140,12 @@ export class OrdersBoard implements OnInit {
     if (!id) return;
     const order = this.orders().find((o) => o.id === id);
     if (!order || order.status === status) return;
+    if (order.status === 'RETURNED') return;
+
+    if (status === 'RETURNED') {
+      this.returnTarget.set(order);
+      return;
+    }
 
     if (status === 'SHIPPED' && !order.deliveryGuyId && this.deliveryGuys().length) {
       this.assignTarget.set(order);
@@ -144,6 +155,47 @@ export class OrdersBoard implements OnInit {
     }
 
     this.applyStatus(id, status);
+  }
+
+  protected openReturn(order: AdminOrder): void {
+    if (order.status === 'RETURNED') return;
+    this.returnTarget.set(order);
+  }
+
+  protected cancelReturn(): void {
+    if (this.returning()) return;
+    this.returnTarget.set(null);
+  }
+
+  protected confirmReturn(): void {
+    const order = this.returnTarget();
+    if (!order || this.returning()) return;
+    this.returning.set(true);
+    this.error.set(null);
+    this.api.markReturned(order.id, 'إرجاع كامل بواسطة الإدارة').subscribe({
+      next: (res) => {
+        this.returning.set(false);
+        this.returnTarget.set(null);
+        const updated = res.order;
+        this.orders.update((list) =>
+          list.map((o) =>
+            o.id === order.id ? { ...o, ...updated, status: 'RETURNED' } : o,
+          ),
+        );
+      },
+      error: (err: { error?: { message?: string | string[] } }) => {
+        this.returning.set(false);
+        const msg = err.error?.message;
+        this.error.set(
+          Array.isArray(msg)
+            ? msg.join(' · ')
+            : typeof msg === 'string'
+              ? msg
+              : 'تعذر إرجاع الطلب',
+        );
+        this.load();
+      },
+    });
   }
 
   protected onDragEnd(): void {

@@ -2,7 +2,7 @@
   <header>
     <div>
       <h1>لوحة حالات الطلبات</h1>
-      <p>اسحب البطاقات عبر: مستلم ← قيد التجهيز ← تم الشحن ← تم التسليم.</p>
+      <p>اسحب البطاقات عبر: مستلم ← تم الشحن ← تم التسليم. استخدم «إرجاع» أو عمود المرتجع لإرجاع الطلب.</p>
     </div>
     <button type="button" class="btn" (click)="load()">تحديث</button>
   </header>
@@ -58,9 +58,9 @@
             @for (order of byStatus(col.status); track order.id) {
               <article
                 class="card"
-                draggable="true"
+                [attr.draggable]="order.status !== 'RETURNED'"
                 [class.dragging]="draggingId() === order.id"
-                (dragstart)="onDragStart(order.id, $event)"
+                (dragstart)="order.status !== 'RETURNED' && onDragStart(order.id, $event)"
                 (dragend)="onDragEnd()"
               >
                 <div class="card__top">
@@ -88,13 +88,22 @@
                     }
                   </p>
                 }
-                <button
-                  type="button"
-                  class="assign-btn"
-                  (click)="openAssign(order); $event.stopPropagation()"
-                >
-                  {{ order.deliveryGuyId ? 'تغيير المندوب' : 'تعيين مندوب' }}
-                </button>
+                @if (order.status !== 'RETURNED') {
+                  <button
+                    type="button"
+                    class="assign-btn"
+                    (click)="openAssign(order); $event.stopPropagation()"
+                  >
+                    {{ order.deliveryGuyId ? 'تغيير المندوب' : 'تعيين مندوب' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="return-btn"
+                    (click)="openReturn(order); $event.stopPropagation()"
+                  >
+                    إرجاع الطلب
+                  </button>
+                }
               </article>
             } @empty {
               <p class="empty">أسقط الطلبات هنا</p>
@@ -149,4 +158,23 @@
       </div>
     </div>
   }
+
+  <app-confirm-dialog
+    [open]="!!returnTarget()"
+    title="إرجاع الطلب؟"
+    [message]="
+      returnTarget()
+        ? 'سيتم إرجاع «' +
+          returnTarget()!.orderNumber +
+          '» وإعادة الكميات للمخزون' +
+          (returnTarget()!.paymentMethod === 'CREDIT'
+            ? ' وتسوية دين المحفظة.'
+            : '.')
+        : ''
+    "
+    confirmLabel="تأكيد الإرجاع"
+    [busy]="returning()"
+    (confirmed)="confirmReturn()"
+    (cancelled)="cancelReturn()"
+  />
 </section>

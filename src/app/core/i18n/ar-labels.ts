@@ -9,6 +9,7 @@ export const orderStatusAr: Record<string, string> = {
   RECEIVED: 'مستلم',
   SHIPPED: 'تم الشحن',
   DELIVERED: 'تم التسليم',
+  RETURNED: 'مرتجع',
 };
 
 export const specialStatusAr: Record<string, string> = {
@@ -26,6 +27,7 @@ export const returnStatusAr: Record<string, string> = {
 export const paymentMethodAr: Record<string, string> = {
   CREDIT: 'آجل',
   CASH_ON_DELIVERY: 'عند الاستلام',
+  CASH: 'نقدي',
 };
 
 export const walletTxAr: Record<string, string> = {

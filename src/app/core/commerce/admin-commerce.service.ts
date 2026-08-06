@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { PageParams, Paginated } from '../pagination';
 
-export type OrderStatus = 'RECEIVED' | 'SHIPPED' | 'DELIVERED';
+export type OrderStatus = 'RECEIVED' | 'SHIPPED' | 'DELIVERED' | 'RETURNED';
 
 export interface AdminWallet {
   id: string;
@@ -122,6 +122,16 @@ export class AdminCommerceService {
     return this.http.patch<AdminOrder>(`${this.api}/admin/orders/${id}/delivery`, {
       deliveryGuyId,
       note,
+    });
+  }
+
+  /** Full order return: restock + CREDIT refund + status RETURNED. */
+  markReturned(id: string, reason?: string) {
+    return this.http.patch<{
+      order: AdminOrder;
+      returnRequest: unknown;
+    }>(`${this.api}/admin/orders/${id}/return`, {
+      reason,
     });
   }
 }

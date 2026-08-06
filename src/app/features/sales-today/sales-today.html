@@ -1,0 +1,222 @@
+<section class="page" dir="rtl">
+  <header class="head">
+    <div>
+      <h1>مبيعات اليوم</h1>
+      <p>
+        القطع المباعة اليوم
+        @if (data(); as d) {
+          <span dir="ltr">({{ d.date }})</span>
+        }
+        — جملة وبيع مباشر من المحل.
+      </p>
+    </div>
+    <div class="head__actions">
+      <button type="button" class="btn btn-ghost" (click)="reload()" [disabled]="loading()">
+        تحديث
+      </button>
+      @if (canSell()) {
+        <button type="button" class="btn btn-primary" (click)="openSell()">
+          بيع من المحل
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="err">{{ error() }}</p>
+  }
+  @if (success()) {
+    <p class="ok">{{ success() }}</p>
+  }
+
+  @if (loading() && !data()) {
+    <p class="muted">جارٍ التحميل…</p>
+  } @else if (data(); as d) {
+    <div class="stats">
+      <article>
+        <span>عدد القطع</span>
+        <strong>{{ d.totalQuantity }}</strong>
+      </article>
+      <article>
+        <span>إجمالي المبيعات</span>
+        <strong>{{ d.totalRevenue | currency: 'EGP':'symbol-narrow':'1.2-2' }}</strong>
+      </article>
+      <article>
+        <span>عدد الطلبات / البيوع</span>
+        <strong>{{ d.orderCount }}</strong>
+      </article>
+    </div>
+
+    @if (d.lines.length === 0) {
+      <p class="empty">لا توجد مبيعات مسجّلة اليوم بعد.</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الوقت</th>
+              <th>الطلب</th>
+              <th>النوع</th>
+              <th>القطعة</th>
+              <th>الكمية</th>
+              <th>السعر</th>
+              <th>الإجمالي</th>
+              <th>الدفع</th>
+              <th>العميل / المتجر</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of d.lines; track trackLine($index, line)) {
+              <tr>
+                <td>{{ line.createdAt | date: 'shortTime' }}</td>
+                <td dir="ltr">{{ line.orderNumber }}</td>
+                <td>
+                  <em class="chip" [attr.data-source]="line.source">
+                    {{ sourceLabel(line.source) }}
+                  </em>
+                </td>
+                <td>
+                  <strong>{{ line.title }}</strong>
+                  @if (line.sku) {
+                    <small dir="ltr">{{ line.sku }}</small>
+                  }
+                </td>
+                <td>×{{ line.quantity }}</td>
+                <td>{{ line.unitPrice | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+                <td>{{ line.lineTotal | currency: 'EGP':'symbol-narrow':'1.2-2' }}</td>
+                <td>{{ paymentLabel(line.paymentMethod) }}</td>
+                <td>
+                  @if (line.source === 'WALK_IN') {
+                    {{ line.customerName || 'عميل المحل' }}
+                  } @else {
+                    {{ line.shopName }}
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</section>
+
+@if (sellOpen()) {
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal__card">
+      <header>
+        <h2>بيع من المحل</h2>
+        <button type="button" class="btn btn-ghost" (click)="closeSell()">إغلاق</button>
+      </header>
+
+      <label class="field">
+        بحث عن قطعة
+        <input
+          type="search"
+          [ngModel]="productQuery()"
+          (ngModelChange)="onProductSearch($event)"
+          placeholder="اسم القطعة أو SKU…"
+          autocomplete="off"
+        />
+      </label>
+      @if (searching()) {
+        <p class="muted">جارٍ البحث…</p>
+      }
+      @if (productHits().length) {
+        <ul class="hits">
+          @for (p of productHits(); track p.id) {
+            <li>
+              <button type="button" (click)="addProduct(p)" [disabled]="p.stockQuantity < 1">
+                <span>
+                  <strong>{{ p.title }}</strong>
+                  <small>
+                    مخزون {{ p.stockQuantity }} ·
+                    {{ p.basePrice | currency: 'EGP':'symbol-narrow':'1.2-2' }}
+                  </small>
+                </span>
+                <em>إضافة</em>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (cart().length) {
+        <div class="cart">
+          @for (line of cart(); track line.productId) {
+            <div class="cart__row">
+              <div>
+                <strong>{{ line.title }}</strong>
+                @if (line.sku) {
+                  <small dir="ltr">{{ line.sku }}</small>
+                }
+              </div>
+              <label>
+                كمية
+                <input
+                  type="number"
+                  min="1"
+                  [max]="line.stockQuantity"
+                  [ngModel]="line.quantity"
+                  (ngModelChange)="setQty(line.productId, $event)"
+                />
+              </label>
+              <label>
+                سعر الوحدة
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [ngModel]="line.unitPrice"
+                  (ngModelChange)="setPrice(line.productId, $event)"
+                />
+              </label>
+              <button type="button" class="btn btn-ghost" (click)="removeLine(line.productId)">
+                حذف
+              </button>
+            </div>
+          }
+          <p class="cart__total">
+            الإجمالي:
+            <strong>{{ cartTotal() | currency: 'EGP':'symbol-narrow':'1.2-2' }}</strong>
+          </p>
+        </div>
+      } @else {
+        <p class="muted">أضف قطعة واحدةً من البحث أعلاه.</p>
+      }
+
+      <div class="grid">
+        <label class="field">
+          اسم العميل (اختياري)
+          <input type="text" [(ngModel)]="customerName" />
+        </label>
+        <label class="field">
+          جوال العميل (اختياري)
+          <input type="tel" [(ngModel)]="customerPhone" />
+        </label>
+      </div>
+      <label class="field">
+        ملاحظة
+        <input type="text" [(ngModel)]="notes" placeholder="اختياري" />
+      </label>
+
+      @if (error()) {
+        <p class="err">{{ error() }}</p>
+      }
+
+      <footer>
+        <button type="button" class="btn btn-ghost" (click)="closeSell()" [disabled]="saving()">
+          إلغاء
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="submitSale()"
+          [disabled]="saving() || !cart().length"
+        >
+          {{ saving() ? 'جارٍ الحفظ…' : 'تأكيد البيع النقدي' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}

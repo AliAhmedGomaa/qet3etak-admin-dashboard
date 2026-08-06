@@ -111,6 +111,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'sales-today',
+        canActivate: [permissionGuard('orders.read', 'orders.create')],
+        loadComponent: () =>
+          import('./features/sales-today/sales-today').then(
+            (m) => m.SalesTodayPage,
+          ),
+      },
+      {
         path: 'invoices',
         canActivate: [permissionGuard('invoices.read')],
         loadComponent: () =>
