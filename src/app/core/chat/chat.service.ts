@@ -112,36 +112,8 @@ export class ChatService {
         list.some((m) => m.id === message.id) ? list : [...list, message],
       );
     }
-    if (message.senderRole === 'SHOP_OWNER' || message.senderRole === 'EMPLOYEE') {
-      this.notifyIfBackground(
-        message.senderRole === 'EMPLOYEE' ? 'رسالة من موظف' : 'رسالة من متجر',
-        message.text,
-        message.shopId !== this.activeShopId() ||
-          document.visibilityState !== 'visible',
-      );
-    }
-  }
-
-  private notifyIfBackground(
-    title: string,
-    body: string,
-    force = false,
-  ): void {
-    if (typeof document === 'undefined' || typeof Notification === 'undefined') {
-      return;
-    }
-    if (Notification.permission !== 'granted') return;
-    if (!force && document.visibilityState === 'visible') return;
-    try {
-      new Notification(title, {
-        body: body.slice(0, 120),
-        tag: `chat-admin-local-${Date.now()}`,
-        dir: 'rtl',
-        lang: 'ar',
-      });
-    } catch {
-      /* ignore */
-    }
+    // Push notifications come from the server (web-push / inbox).
+    // Do not show a second local Notification here — it has no click URL.
   }
 
   private upsertConversation(conversation: ChatConversation): void {
