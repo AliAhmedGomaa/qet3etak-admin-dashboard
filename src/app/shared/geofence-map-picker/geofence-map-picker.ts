@@ -42,35 +42,36 @@ const locationPinIcon = L.icon({
   template: `
     <div class="picker" dir="rtl">
       <p class="hint">
-        ابحث بالعنوان للانتقال على الخريطة، أو استخدم موقعك الحالي، ثم ارسم حدود موقع العمل
-        (اضغط لإضافة نقاط ثم «إنهاء الرسم»).
+        ابدأ بكتابة العنوان واختر من القائمة للانتقال على الخريطة، أو استخدم موقعك الحالي،
+        ثم ارسم حدود موقع العمل.
       </p>
 
-      <form class="search" (submit)="$event.preventDefault(); searchAddress()">
+      <div class="search">
         <input
           type="search"
           [value]="addressQuery()"
-          (input)="addressQuery.set($any($event.target).value)"
+          (input)="onAddressInput($any($event.target).value)"
+          (focus)="onAddressFocus()"
           placeholder="اكتب العنوان أو اسم المكان…"
           aria-label="بحث بالعنوان"
-          autocomplete="street-address"
+          aria-autocomplete="list"
+          autocomplete="off"
         />
-        <button type="submit" class="btn" [disabled]="searching() || !addressQuery().trim()">
-          {{ searching() ? 'جارٍ البحث…' : 'اذهب' }}
-        </button>
-      </form>
-
-      @if (searchResults().length > 1) {
-        <ul class="results" role="listbox">
-          @for (hit of searchResults(); track hit.place_id) {
-            <li>
-              <button type="button" (click)="goToResult(hit)">
-                {{ hit.display_name }}
-              </button>
-            </li>
-          }
-        </ul>
-      }
+        @if (searching()) {
+          <span class="search-hint">جارٍ البحث…</span>
+        }
+        @if (searchResults().length > 0) {
+          <ul class="results" role="listbox">
+            @for (hit of searchResults(); track hit.place_id) {
+              <li>
+                <button type="button" (mousedown)="$event.preventDefault()" (click)="goToResult(hit)">
+                  {{ hit.display_name }}
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
 
       <div class="actions">
         <button type="button" class="btn" (click)="useMyLocation()" [disabled]="locating()">
@@ -118,9 +119,9 @@ const locationPinIcon = L.icon({
       line-height: 1.45;
     }
     .search {
+      position: relative;
       display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 0.5rem;
+      gap: 0.35rem;
     }
     .search input {
       min-height: 2.4rem;
@@ -131,15 +132,22 @@ const locationPinIcon = L.icon({
       background: var(--input-bg, #fff);
       color: var(--ink, #0f172a);
     }
+    .search-hint {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--ink-muted, #64748b);
+    }
     .results {
       list-style: none;
       margin: 0;
       padding: 0;
-      max-height: 9rem;
+      max-height: 11rem;
       overflow: auto;
       border: 1px solid var(--border, #e2e8f0);
       border-radius: 0.75rem;
       background: var(--surface, #fff);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+      z-index: 5;
     }
     .results li + li {
       border-top: 1px solid var(--border, #e2e8f0);
@@ -243,6 +251,9 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
   private draftPoints: L.LatLng[] = [];
   private ready = false;
   private skipNextInputSync = false;
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
+  private searchAbort?: AbortController;
+  private searchSeq = 0;
 
   constructor() {
     effect(() => {
@@ -300,6 +311,8 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchAbort?.abort();
     this.locationPin?.remove();
     this.locationPin = undefined;
     this.clearLayers();
@@ -333,19 +346,42 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     );
   }
 
-  protected async searchAddress(): Promise<void> {
-    const q = this.addressQuery().trim();
-    if (!q || this.searching()) return;
-    this.searching.set(true);
+  protected onAddressInput(value: string): void {
+    this.addressQuery.set(value);
     this.error.set(null);
-    this.searchResults.set([]);
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    const q = value.trim();
+    if (q.length < 3) {
+      this.searchAbort?.abort();
+      this.searching.set(false);
+      this.searchResults.set([]);
+      return;
+    }
+    this.searchTimer = setTimeout(() => {
+      void this.fetchSuggestions(q);
+    }, 350);
+  }
+
+  protected onAddressFocus(): void {
+    if (this.searchResults().length === 0 && this.addressQuery().trim().length >= 3) {
+      void this.fetchSuggestions(this.addressQuery().trim());
+    }
+  }
+
+  protected async fetchSuggestions(q: string): Promise<void> {
+    this.searchAbort?.abort();
+    const abort = new AbortController();
+    this.searchAbort = abort;
+    const seq = ++this.searchSeq;
+    this.searching.set(true);
     try {
       const url = new URL('https://nominatim.openstreetmap.org/search');
       url.searchParams.set('format', 'json');
       url.searchParams.set('q', q);
-      url.searchParams.set('limit', '5');
+      url.searchParams.set('limit', '6');
       url.searchParams.set('addressdetails', '0');
       const res = await fetch(url.toString(), {
+        signal: abort.signal,
         headers: {
           Accept: 'application/json',
           'Accept-Language': 'ar,en',
@@ -353,19 +389,18 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const hits = (await res.json()) as NominatimHit[];
+      if (seq !== this.searchSeq) return;
+      this.searchResults.set(hits);
       if (!hits.length) {
-        this.error.set('لم يتم العثور على هذا العنوان');
-        return;
+        this.error.set('لا توجد نتائج مطابقة');
       }
-      if (hits.length === 1) {
-        this.goToResult(hits[0]);
-      } else {
-        this.searchResults.set(hits);
-      }
-    } catch {
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+      if (seq !== this.searchSeq) return;
+      this.searchResults.set([]);
       this.error.set('تعذر البحث عن العنوان. حاول مرة أخرى');
     } finally {
-      this.searching.set(false);
+      if (seq === this.searchSeq) this.searching.set(false);
     }
   }
 
@@ -376,6 +411,7 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     const latlng = L.latLng(lat, lng);
     this.map.setView(latlng, 17);
     this.setLocationPin(latlng, hit.display_name);
+    this.addressQuery.set(hit.display_name);
     this.searchResults.set([]);
     this.error.set(null);
   }
@@ -390,7 +426,6 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
       }).addTo(this.map);
     } else {
       this.locationPin.setLatLng(latlng);
-      this.locationPin.setTooltipContent?.(label);
     }
     this.locationPin.unbindPopup();
     this.locationPin.bindPopup(label).openPopup();
