@@ -24,7 +24,6 @@ import {
         </div>
         <div class="actions">
           <a routerLink="/employees" class="btn">الموظفون</a>
-          <button type="button" class="btn primary" (click)="load()">تحديث</button>
         </div>
       </header>
       @if (error()) {

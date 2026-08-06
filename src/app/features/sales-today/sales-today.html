@@ -10,16 +10,13 @@
         — جملة وبيع مباشر من المحل.
       </p>
     </div>
-    <div class="head__actions">
-      <button type="button" class="btn btn-ghost" (click)="reload()" [disabled]="loading()">
-        تحديث
-      </button>
-      @if (canSell()) {
+    @if (canSell()) {
+      <div class="head__actions">
         <button type="button" class="btn btn-primary" (click)="openSell()">
           بيع من المحل
         </button>
-      }
-    </div>
+      </div>
+    }
   </header>
 
   @if (error()) {

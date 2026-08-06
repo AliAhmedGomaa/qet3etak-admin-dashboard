@@ -4,9 +4,6 @@
       <h1>اعتماد المتاجر</h1>
       <p>مراجعة طلبات تسجيل الجملة وصور البطاقة التجارية.</p>
     </div>
-    <button type="button" class="btn btn-ghost" (click)="load()" [disabled]="loading()">
-      {{ loading() ? 'جارٍ التحديث…' : 'تحديث' }}
-    </button>
   </header>
 
   @if (error()) {
