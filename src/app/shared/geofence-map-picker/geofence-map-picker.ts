@@ -24,6 +24,18 @@ const POLY_STYLE: L.PolylineOptions = {
   fillOpacity: 0.22,
 };
 
+/** Leaflet default marker icons break under Angular bundling — use copied public assets. */
+const locationPinIcon = L.icon({
+  iconUrl: 'leaflet/marker-icon.png',
+  iconRetinaUrl: 'leaflet/marker-icon-2x.png',
+  shadowUrl: 'leaflet/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  tooltipAnchor: [16, -28],
+  shadowSize: [41, 41],
+});
+
 @Component({
   selector: 'app-geofence-map-picker',
   standalone: true,
@@ -154,6 +166,7 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
   private map?: L.Map;
   private draftLine?: L.Polyline;
   private polygonLayer?: L.Polygon;
+  private locationPin?: L.Marker;
   private vertexMarkers: L.CircleMarker[] = [];
   private draftPoints: L.LatLng[] = [];
   private ready = false;
@@ -215,6 +228,8 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.locationPin?.remove();
+    this.locationPin = undefined;
     this.clearLayers();
     this.map?.remove();
     this.map = undefined;
@@ -230,7 +245,9 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         this.locating.set(false);
-        this.map?.setView([pos.coords.latitude, pos.coords.longitude], 17);
+        const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+        this.map?.setView(latlng, 17);
+        this.setLocationPin(latlng);
       },
       (err) => {
         this.locating.set(false);
@@ -242,6 +259,21 @@ export class GeofenceMapPicker implements AfterViewInit, OnDestroy {
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
+  }
+
+  private setLocationPin(latlng: L.LatLng): void {
+    if (!this.map) return;
+    if (!this.locationPin) {
+      this.locationPin = L.marker(latlng, {
+        icon: locationPinIcon,
+        zIndexOffset: 1000,
+        title: 'موقعك الحالي',
+      }).addTo(this.map);
+      this.locationPin.bindPopup('موقعك الحالي').openPopup();
+    } else {
+      this.locationPin.setLatLng(latlng);
+      this.locationPin.openPopup();
+    }
   }
 
   protected finishDrawing(): void {
