@@ -113,7 +113,7 @@ const POLY_STYLE: L.PolylineOptions = {
       color: #0d9a6a;
     }
     .map {
-      height: 18rem;
+      height: 22rem;
       width: 100%;
       border-radius: 0.85rem;
       border: 1px solid var(--border, #e2e8f0);

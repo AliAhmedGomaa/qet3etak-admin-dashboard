@@ -50,7 +50,12 @@ export class BranchesAdmin implements OnInit {
   protected readonly managerTarget = signal<Branch | null>(null);
   protected readonly managerUserId = signal<string>('');
   protected readonly assigning = signal(false);
-  protected readonly geofencePolygon = signal<GeofencePoint[]>([]);
+
+  /** Dedicated geofence map popup (separate from branch edit form). */
+  protected readonly locationTarget = signal<Branch | null>(null);
+  protected readonly locationPolygon = signal<GeofencePoint[]>([]);
+  protected readonly locationSaving = signal(false);
+  protected readonly locationError = signal<string | null>(null);
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -139,7 +144,6 @@ export class BranchesAdmin implements OnInit {
     this.load();
   }
 
-  /** Current manager not already in the selectable staff list. */
   protected managerOutsideList(branch: Branch): boolean {
     const id = branch.manager?.id;
     if (!id) return false;
@@ -148,7 +152,6 @@ export class BranchesAdmin implements OnInit {
 
   protected openCreate(): void {
     this.editingId.set(null);
-    this.geofencePolygon.set([]);
     this.form.reset({
       name: '',
       code: '',
@@ -163,11 +166,6 @@ export class BranchesAdmin implements OnInit {
 
   protected openEdit(branch: Branch): void {
     this.editingId.set(branch.id);
-    this.geofencePolygon.set(
-      Array.isArray(branch.geofencePolygon)
-        ? branch.geofencePolygon.map((p) => ({ lat: p.lat, lng: p.lng }))
-        : [],
-    );
     this.form.reset({
       name: branch.name,
       code: branch.code,
@@ -183,21 +181,6 @@ export class BranchesAdmin implements OnInit {
   protected closeEditor(): void {
     this.editorOpen.set(false);
     this.editingId.set(null);
-    this.geofencePolygon.set([]);
-  }
-
-  protected onPolygonChange(points: GeofencePoint[]): void {
-    this.geofencePolygon.set(points);
-  }
-
-  protected onMapCleared(): void {
-    this.geofencePolygon.set([]);
-  }
-
-  protected editingBranch(): Branch | null {
-    const id = this.editingId();
-    if (!id) return null;
-    return this.branches().find((b) => b.id === id) ?? null;
   }
 
   protected hasGeofence(branch: Branch): boolean {
@@ -210,6 +193,62 @@ export class BranchesAdmin implements OnInit {
     );
   }
 
+  protected openLocation(branch: Branch): void {
+    this.locationError.set(null);
+    this.locationTarget.set(branch);
+    this.locationPolygon.set(
+      Array.isArray(branch.geofencePolygon) && branch.geofencePolygon.length >= 3
+        ? branch.geofencePolygon.map((p) => ({ lat: p.lat, lng: p.lng }))
+        : [],
+    );
+  }
+
+  protected closeLocation(): void {
+    if (this.locationSaving()) return;
+    this.locationTarget.set(null);
+    this.locationPolygon.set([]);
+    this.locationError.set(null);
+  }
+
+  protected onLocationPolygonChange(points: GeofencePoint[]): void {
+    this.locationPolygon.set(points);
+    this.locationError.set(null);
+  }
+
+  protected onLocationCleared(): void {
+    this.locationPolygon.set([]);
+    this.locationError.set(null);
+  }
+
+  protected saveLocation(): void {
+    const branch = this.locationTarget();
+    if (!branch || this.locationSaving()) return;
+    const poly = this.locationPolygon();
+    if (poly.length > 0 && poly.length < 3) {
+      this.locationError.set('أكمل رسم النطاق (3 نقاط على الأقل) أو امسحه');
+      return;
+    }
+    this.locationSaving.set(true);
+    this.locationError.set(null);
+    this.api
+      .update(branch.id, {
+        geofencePolygon: poly.length >= 3 ? poly : [],
+      })
+      .subscribe({
+        next: () => {
+          this.locationSaving.set(false);
+          this.closeLocation();
+          this.load();
+        },
+        error: (err) => {
+          this.locationSaving.set(false);
+          this.locationError.set(
+            err?.error?.message ?? 'فشل حفظ نطاق الموقع',
+          );
+        },
+      });
+  }
+
   protected save(): void {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
@@ -217,7 +256,6 @@ export class BranchesAdmin implements OnInit {
     this.saving.set(true);
     this.error.set(null);
     const id = this.editingId();
-    const poly = this.geofencePolygon();
     const payload = {
       name: raw.name.trim(),
       code: raw.code.trim(),
@@ -226,11 +264,6 @@ export class BranchesAdmin implements OnInit {
       phone: raw.phone.trim() || undefined,
       notes: raw.notes.trim() || undefined,
       status: raw.status,
-      ...(poly.length >= 3
-        ? { geofencePolygon: poly }
-        : id
-          ? { geofencePolygon: [] as GeofencePoint[] }
-          : {}),
     };
     const req$ = id
       ? this.api.update(id, payload)

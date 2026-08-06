@@ -98,6 +98,9 @@
                 </button>
               </td>
               <td class="row-actions">
+                <button type="button" class="btn btn-ghost" (click)="openLocation(branch)">
+                  {{ hasGeofence(branch) ? 'تعديل الموقع' : 'تحديد الموقع' }}
+                </button>
                 <button type="button" class="btn btn-ghost" (click)="openManager(branch)">المدير</button>
                 <button type="button" class="btn btn-ghost" (click)="openEdit(branch)">تعديل</button>
               </td>
@@ -158,19 +161,9 @@
             <option value="INACTIVE">متوقف</option>
           </select>
         </label>
-
-        <fieldset class="geofence">
-          <legend>نطاق موقع العمل (للمندوبين)</legend>
-          <app-geofence-map-picker
-            [polygon]="geofencePolygon()"
-            [legacyLat]="editingBranch()?.geofenceLat ?? null"
-            [legacyLng]="editingBranch()?.geofenceLng ?? null"
-            [legacyRadiusMeters]="editingBranch()?.geofenceRadiusMeters ?? null"
-            (polygonChange)="onPolygonChange($event)"
-            (cleared)="onMapCleared()"
-          />
-        </fieldset>
-
+        <p class="muted geo-form-hint">
+          لتحديد نطاق موقع العمل للمندوبين استخدم زر «تحديد الموقع» من قائمة الفروع.
+        </p>
         <footer>
           <button type="button" class="btn btn-ghost" (click)="closeEditor()">إلغاء</button>
           <button type="submit" class="btn btn-primary" [disabled]="saving()">
@@ -178,6 +171,60 @@
           </button>
         </footer>
       </form>
+    </div>
+  </div>
+}
+
+@if (locationTarget(); as branch) {
+  <div class="overlay" (click)="closeLocation()">
+    <div
+      class="drawer drawer--map"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="location-dialog-title"
+    >
+      <header>
+        <div>
+          <h2 id="location-dialog-title">موقع الفرع</h2>
+          <p class="muted">{{ branch.name }} · {{ branch.city }}</p>
+        </div>
+        <button type="button" class="btn btn-ghost" (click)="closeLocation()" [disabled]="locationSaving()">
+          إغلاق
+        </button>
+      </header>
+
+      <app-geofence-map-picker
+        [polygon]="locationPolygon()"
+        [legacyLat]="branch.geofenceLat ?? null"
+        [legacyLng]="branch.geofenceLng ?? null"
+        [legacyRadiusMeters]="branch.geofenceRadiusMeters ?? null"
+        (polygonChange)="onLocationPolygonChange($event)"
+        (cleared)="onLocationCleared()"
+      />
+
+      @if (locationError()) {
+        <p class="err">{{ locationError() }}</p>
+      }
+
+      <footer class="map-footer">
+        <button
+          type="button"
+          class="btn btn-ghost"
+          (click)="closeLocation()"
+          [disabled]="locationSaving()"
+        >
+          إلغاء
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="saveLocation()"
+          [disabled]="locationSaving()"
+        >
+          {{ locationSaving() ? 'جارٍ الحفظ…' : 'حفظ الموقع' }}
+        </button>
+      </footer>
     </div>
   </div>
 }
