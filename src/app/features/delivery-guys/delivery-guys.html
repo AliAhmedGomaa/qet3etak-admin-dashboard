@@ -36,7 +36,7 @@
           <th>المندوب</th>
           <th>الجوال</th>
           <th>المدينة / المركبة</th>
-          <th>نموذج الأجر</th>
+          <th>الأجر / ساعة</th>
           <th>التوصيلات</th>
           <th>إجمالي الأتعاب</th>
           <th>الحالة</th>
@@ -70,7 +70,6 @@
               </td>
               <td>
                 <span class="fee">{{ feeSummary(guy) }}</span>
-                <small>{{ feeLabel(guy.feeModel) }}</small>
               </td>
               <td>{{ guy.totalDeliveries }}</td>
               <td>{{ guy.totalFeesEarned | currency: 'EGP':'symbol-narrow':'1.0-2' }}</td>
@@ -146,54 +145,16 @@
                 <option value="INACTIVE">متوقف</option>
               </select>
             </label>
-            <label class="fee-model-field">
-              طريقة احتساب الراتب
-              <select
-                formControlName="feeModel"
-                (change)="onFeeModelChange($any($event.target).value)"
-              >
-                @for (m of feeModelOptions(); track m.value) {
-                  <option [value]="m.value">{{ m.label }}</option>
-                }
-              </select>
-            </label>
           </div>
 
-          <p class="fee-hint">{{ feeHint(selectedFeeModel()) }}</p>
+          <p class="fee-hint">
+            أجر المندوب بالساعة فقط — يُحسب من تسجيل الحضور حتى الانصراف في موقع العمل.
+          </p>
 
-          @if (selectedFeeModel() === 'FLAT') {
-            <label>
-              الأجر لكل توصيلة (ج.م)
-              <input type="number" min="0" step="1" formControlName="flatFee" />
-            </label>
-          }
-          @if (selectedFeeModel() === 'PERCENT') {
-            <label>
-              النسبة من قيمة الطلب (%)
-              <input type="number" min="0" step="0.1" formControlName="percentRate" />
-            </label>
-          }
-          @if (selectedFeeModel() === 'BASE_PLUS_ITEMS') {
-            <div class="grid">
-              <label>
-                الأجر الأساسي (ج.م)
-                <input type="number" min="0" step="1" formControlName="baseFee" />
-              </label>
-              <label>
-                أجر كل قطعة (ج.م)
-                <input type="number" min="0" step="0.5" formControlName="perItemFee" />
-              </label>
-            </div>
-          }
-          @if (selectedFeeModel() === 'HOURLY') {
-            <label>
-              سعر الساعة (ج.م)
-              <input type="number" min="1" step="1" formControlName="hourlyRate" />
-              <small class="notes">
-                من تسجيل الحضور حتى الانصراف في موقع العمل — وليس عن كل طلب.
-              </small>
-            </label>
-          }
+          <label>
+            سعر الساعة (ج.م)
+            <input type="number" min="1" step="1" formControlName="hourlyRate" />
+          </label>
 
           <label>
             ملاحظات
@@ -201,23 +162,11 @@
           </label>
 
           <div class="preview">
-            @if (selectedFeeModel() === 'HOURLY') {
-              <button type="button" class="btn btn-ghost" (click)="previewFee()">
-                معاينة أجر ساعة عمل واحدة
-              </button>
-            } @else {
-              <button type="button" class="btn btn-ghost" (click)="previewFee()">
-                معاينة أجر توصيلة (مثال: طلب 1500 ج.م / 5 قطع)
-              </button>
-            }
+            <button type="button" class="btn btn-ghost" (click)="previewFee()">
+              معاينة أجر ساعة عمل واحدة
+            </button>
             @if (feePreview() !== null) {
-              <strong>
-                @if (selectedFeeModel() === 'HOURLY') {
-                  {{ feePreview() | currency: 'EGP':'symbol-narrow':'1.0-2' }} لكل ساعة
-                } @else {
-                  {{ feePreview() | currency: 'EGP':'symbol-narrow':'1.0-2' }} للتوصيلة
-                }
-              </strong>
+              <strong>{{ feePreview() | currency: 'EGP':'symbol-narrow':'1.0-2' }} لكل ساعة</strong>
             }
           </div>
 

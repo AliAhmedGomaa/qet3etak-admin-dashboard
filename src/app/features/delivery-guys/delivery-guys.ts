@@ -12,31 +12,12 @@ import {
   Validators,
 } from '@angular/forms';
 import {
-  DeliveryFeeModel,
   DeliveryGuy,
   DeliveryGuyInput,
   DeliveryGuysAdminService,
 } from '../../core/delivery/delivery-guys-admin.service';
 import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
 import { AdminPager } from '../../shared/admin-pager/admin-pager';
-
-const FEE_LABELS: Record<DeliveryFeeModel, string> = {
-  FLAT: 'حسب الطلب (لكل توصيلة)',
-  PERCENT: 'نسبة من قيمة الطلب',
-  BASE_PLUS_ITEMS: 'أساسي + لكل قطعة',
-  HOURLY: 'حسب الساعة (وقت العمل)',
-};
-
-const FEE_HINTS: Record<DeliveryFeeModel, string> = {
-  FLAT: 'حدد مبلغ الأجر عن كل طلب يوصّله المندوب.',
-  PERCENT: 'نسبة مئوية من إجمالي قيمة الطلب.',
-  BASE_PLUS_ITEMS: 'أجر أساسي للطلب + مبلغ إضافي عن كل قطعة.',
-  HOURLY:
-    'حدد سعر الساعة. يُحسب الأجر من تسجيل الحضور حتى الانصراف — وليس عن كل توصيلة.',
-};
-
-/** Primary salary modes shown in the editor dropdown. */
-const PRIMARY_FEE_MODELS: DeliveryFeeModel[] = ['FLAT', 'HOURLY'];
 
 @Component({
   selector: 'app-delivery-guys',
@@ -65,22 +46,6 @@ export class DeliveryGuysPage implements OnInit {
   protected readonly deleting = signal(false);
   protected readonly feePreview = signal<number | null>(null);
   protected readonly editorError = signal<string | null>(null);
-  protected readonly selectedFeeModel = signal<DeliveryFeeModel>('FLAT');
-
-  protected readonly feeModels: Array<{ value: DeliveryFeeModel; label: string }> =
-    PRIMARY_FEE_MODELS.map((value) => ({
-      value,
-      label: FEE_LABELS[value],
-    }));
-
-  /** Dropdown options — includes legacy models only when editing that courier. */
-  protected readonly feeModelOptions = signal<
-    Array<{ value: DeliveryFeeModel; label: string }>
-  >(this.feeModels);
-
-  protected feeHint(model: DeliveryFeeModel): string {
-    return FEE_HINTS[model];
-  }
 
   protected readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(2)]],
@@ -90,33 +55,16 @@ export class DeliveryGuysPage implements OnInit {
     vehicleType: [''],
     notes: [''],
     status: this.fb.nonNullable.control<'ACTIVE' | 'INACTIVE'>('ACTIVE'),
-    feeModel: this.fb.nonNullable.control<DeliveryFeeModel>('FLAT'),
-    flatFee: [30, [Validators.min(0)]],
-    percentRate: [0, [Validators.min(0)]],
-    baseFee: [20, [Validators.min(0)]],
-    perItemFee: [2, [Validators.min(0)]],
-    hourlyRate: [25, [Validators.min(0)]],
+    hourlyRate: [25, [Validators.required, Validators.min(1)]],
   });
 
   ngOnInit(): void {
     this.load();
   }
 
-  protected feeLabel(model: DeliveryFeeModel): string {
-    return FEE_LABELS[model] ?? model;
-  }
-
   protected feeSummary(guy: DeliveryGuy): string {
-    switch (guy.feeModel) {
-      case 'PERCENT':
-        return `${guy.percentRate}% من الطلب`;
-      case 'BASE_PLUS_ITEMS':
-        return `${guy.baseFee} + ${guy.perItemFee}×قطعة`;
-      case 'HOURLY':
-        return `${guy.hourlyRate} ج.م / ساعة`;
-      default:
-        return `${guy.flatFee} ج.م / توصيلة`;
-    }
+    const rate = Number(guy.hourlyRate) || 0;
+    return rate > 0 ? `${rate} ج.م / ساعة` : '—';
   }
 
   protected load(): void {
@@ -176,8 +124,6 @@ export class DeliveryGuysPage implements OnInit {
     this.editingId.set(null);
     this.feePreview.set(null);
     this.editorError.set(null);
-    this.selectedFeeModel.set('FLAT');
-    this.feeModelOptions.set(this.feeModels);
     this.form.reset({
       fullName: '',
       phone: '',
@@ -186,11 +132,6 @@ export class DeliveryGuysPage implements OnInit {
       vehicleType: '',
       notes: '',
       status: 'ACTIVE',
-      feeModel: 'FLAT',
-      flatFee: 30,
-      percentRate: 0,
-      baseFee: 20,
-      perItemFee: 2,
       hourlyRate: 25,
     });
     this.form.controls.password.setValidators([
@@ -205,13 +146,6 @@ export class DeliveryGuysPage implements OnInit {
     this.editingId.set(guy.id);
     this.feePreview.set(null);
     this.editorError.set(null);
-    const model = guy.feeModel || 'FLAT';
-    this.selectedFeeModel.set(model);
-    const options = [...this.feeModels];
-    if (!PRIMARY_FEE_MODELS.includes(model)) {
-      options.push({ value: model, label: FEE_LABELS[model] });
-    }
-    this.feeModelOptions.set(options);
     this.form.patchValue({
       fullName: guy.fullName,
       phone: guy.phone,
@@ -220,11 +154,6 @@ export class DeliveryGuysPage implements OnInit {
       vehicleType: guy.vehicleType ?? '',
       notes: guy.notes ?? '',
       status: guy.status,
-      feeModel: model,
-      flatFee: Number(guy.flatFee) || 0,
-      percentRate: Number(guy.percentRate) || 0,
-      baseFee: Number(guy.baseFee) || 0,
-      perItemFee: Number(guy.perItemFee) || 0,
       hourlyRate: Number(guy.hourlyRate) > 0 ? Number(guy.hourlyRate) : 25,
     });
     this.form.controls.password.clearValidators();
@@ -239,22 +168,9 @@ export class DeliveryGuysPage implements OnInit {
     this.editorError.set(null);
   }
 
-  protected onFeeModelChange(value: string): void {
-    const model = value as DeliveryFeeModel;
-    this.selectedFeeModel.set(model);
-    this.feePreview.set(null);
-    this.editorError.set(null);
-  }
-
   protected previewFee(): void {
-    const v = this.form.getRawValue();
-    let fee = 0;
-    if (v.feeModel === 'PERCENT') fee = (1500 * (Number(v.percentRate) || 0)) / 100;
-    else if (v.feeModel === 'BASE_PLUS_ITEMS')
-      fee = (Number(v.baseFee) || 0) + 5 * (Number(v.perItemFee) || 0);
-    else if (v.feeModel === 'HOURLY') fee = Number(v.hourlyRate) || 0;
-    else fee = Number(v.flatFee) || 0;
-    this.feePreview.set(Number(fee.toFixed(2)));
+    const rate = Number(this.form.controls.hourlyRate.value) || 0;
+    this.feePreview.set(Number(rate.toFixed(2)));
   }
 
   protected save(): void {
@@ -265,9 +181,8 @@ export class DeliveryGuysPage implements OnInit {
       return;
     }
     const value = this.form.getRawValue();
-    const feeModel = value.feeModel;
     const hourlyRate = Number(value.hourlyRate) || 0;
-    if (feeModel === 'HOURLY' && hourlyRate <= 0) {
+    if (hourlyRate <= 0) {
       this.editorError.set('يجب تحديد سعر الساعة (ج.م) أكبر من صفر');
       return;
     }
@@ -284,11 +199,7 @@ export class DeliveryGuysPage implements OnInit {
       vehicleType: value.vehicleType.trim(),
       notes: value.notes.trim(),
       status: value.status,
-      feeModel,
-      flatFee: Number(value.flatFee) || 0,
-      percentRate: Number(value.percentRate) || 0,
-      baseFee: Number(value.baseFee) || 0,
-      perItemFee: Number(value.perItemFee) || 0,
+      feeModel: 'HOURLY',
       hourlyRate,
     };
     if (value.password.trim()) {
