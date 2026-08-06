@@ -125,7 +125,7 @@
         <form [formGroup]="form" (ngSubmit)="save()">
           <div class="grid">
             <label>الاسم<input formControlName="fullName" /></label>
-            <label>الجوال<input formControlName="phone" dir="ltr" /></label>
+            <label>الجوال<input formControlName="phone" /></label>
             <label>الوظيفة<input formControlName="jobTitle" /></label>
             <label>سعر الساعة<input type="number" min="0" step="0.01" formControlName="hourlyRate" /></label>
             <label>ساعات اليوم الافتراضية<input type="number" min="0" step="0.5" formControlName="standardDailyHours" /></label>
@@ -144,7 +144,6 @@
               <input
                 type="password"
                 formControlName="password"
-                dir="ltr"
                 [placeholder]="editingId() ? 'اتركها فارغة للإبقاء' : 'مطلوبة'"
               />
             </label>

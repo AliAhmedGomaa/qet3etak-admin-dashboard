@@ -120,14 +120,13 @@
             </label>
             <label>
               رقم الجوال
-              <input formControlName="phone" dir="ltr" />
+              <input formControlName="phone" />
             </label>
             <label>
               {{ editingId() ? 'كلمة مرور البوابة (اختياري)' : 'كلمة مرور البوابة' }}
               <input
                 type="password"
                 formControlName="password"
-                dir="ltr"
                 [placeholder]="editingId() ? 'اتركها فارغة للإبقاء على الحالية' : 'للدخول لتطبيق المندوب'"
                 autocomplete="new-password"
               />

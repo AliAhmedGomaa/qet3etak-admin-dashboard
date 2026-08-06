@@ -84,6 +84,22 @@ body {
   touch-action: manipulation;
 }
 
+/* Keep typed values + placeholders right-aligned in every form control. */
+input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='hidden']):not([type='range']):not([type='color']),
+select,
+textarea {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: plaintext;
+}
+
+input::placeholder,
+textarea::placeholder {
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: plaintext;
+}
+
 table {
   text-align: start;
 }
